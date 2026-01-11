@@ -31,6 +31,7 @@ Run `CHECK_DEPENDENCIES.bat` to verify all dependencies are installed
 ## ✨ Features
 
 - ✅ Download YouTube videos directly into Premiere Pro
+- ✅ **Folder Quick-Select**: 4 preset destination buttons for fast switching
 - ✅ Automatic H.264 video codec (Premiere Pro compatible)
 - ✅ Automatic AAC audio conversion (no more silent videos!)
 - ✅ Choose output format: MP3, WAV, or FLAC
@@ -81,18 +82,19 @@ For more troubleshooting, see [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md)
 
 ## 📝 Recent Updates
 
-### Version 2.1 (Latest)
+### Version 2.2 (Latest)
+- ✅ **Folder Quick-Select Buttons**: 4 destination buttons for fast folder switching
+- ✅ 3 customizable preset folders in settings
+- ✅ 1 "Custom" button for manual path entry
+- ✅ Presets use relative paths (e.g., `./MEDIAS`)
+- ✅ Proper bin naming in Premiere (strips `./` prefixes)
+
+### Version 2.1
 - ✅ Fixed MP4 file detection and import
 - ✅ Excluded VP9 codec (only H.264 downloaded)
 - ✅ Added automatic AAC audio conversion
 - ✅ Improved logging and error messages
 - ✅ Added comprehensive installation package
-
-### Technical Changes:
-- Format selection now excludes VP9: `bestvideo[vcodec!=vp9]`
-- Audio automatically converted to AAC 192kbps
-- Proper detection of merged MP4 files via `[Merger]` message
-- Enhanced file detection with MP4 prioritization
 
 ---
 

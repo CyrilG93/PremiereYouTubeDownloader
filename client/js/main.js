@@ -99,9 +99,14 @@ const settingsBtn = document.getElementById('settingsBtn');
 const settingsPanel = document.getElementById('settingsPanel');
 const closeSettingsBtn = document.getElementById('closeSettingsBtn');
 const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+const folderQuickBtns = document.querySelectorAll('.folder-quick-btn');
+const folderPreset1Input = document.getElementById('folderPreset1');
+const folderPreset2Input = document.getElementById('folderPreset2');
+const folderPreset3Input = document.getElementById('folderPreset3');
 
 // --- STATE ---
 let selectedFormat = 'both';
+let selectedFolderSlot = '1';
 let isDownloading = false;
 let downloadAbortController = null;
 
@@ -109,11 +114,39 @@ let downloadAbortController = null;
 function loadSettings() {
     const settings = JSON.parse(localStorage.getItem('ytDownloaderSettings') || '{}');
 
-    if (settings.defaultFolder) {
-        folderPath.value = settings.defaultFolder;
-        document.getElementById('defaultFolder').value = settings.defaultFolder;
+    // Load folder presets
+    const presets = {
+        1: settings.folderPreset1 || 'Bouton 1',
+        2: settings.folderPreset2 || 'Bouton 2',
+        3: settings.folderPreset3 || 'Bouton 3'
+    };
+
+    // Update preset input fields
+    if (folderPreset1Input) folderPreset1Input.value = settings.folderPreset1 || '';
+    if (folderPreset2Input) folderPreset2Input.value = settings.folderPreset2 || '';
+    if (folderPreset3Input) folderPreset3Input.value = settings.folderPreset3 || '';
+
+    // Update button labels
+    folderQuickBtns.forEach(btn => {
+        const slot = btn.dataset.folderSlot;
+        if (slot !== 'custom' && presets[slot]) {
+            btn.querySelector('span').textContent = presets[slot];
+        }
+    });
+
+    // Load selected folder slot
+    if (settings.selectedFolderSlot) {
+        selectedFolderSlot = settings.selectedFolderSlot;
+        folderQuickBtns.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.folderSlot === selectedFolderSlot);
+        });
+    }
+
+    // Load custom folder path
+    if (settings.customFolderPath) {
+        folderPath.value = settings.customFolderPath;
     } else {
-        folderPath.value = './ELEMENTS';
+        folderPath.value = '';
     }
 
     if (settings.defaultFormat) {
@@ -137,25 +170,34 @@ function loadSettings() {
         const radio = document.querySelector(`input[name="pathType"][value="${settings.pathType}"]`);
         if (radio) radio.checked = true;
     }
-
-    // Load current folder path
-    if (settings.currentFolder) {
-        folderPath.value = settings.currentFolder;
-    }
 }
 
 function saveSettings() {
     const settings = {
-        defaultFolder: document.getElementById('defaultFolder').value,
+        folderPreset1: folderPreset1Input ? folderPreset1Input.value.trim() : '',
+        folderPreset2: folderPreset2Input ? folderPreset2Input.value.trim() : '',
+        folderPreset3: folderPreset3Input ? folderPreset3Input.value.trim() : '',
         defaultFormat: document.getElementById('defaultFormat').value,
         autoImport: document.getElementById('autoImport').checked,
         createBin: document.getElementById('createBin').checked,
         pathType: document.querySelector('input[name="pathType"]:checked').value,
-        currentFolder: folderPath.value.trim()
+        customFolderPath: folderPath.value.trim(),
+        selectedFolderSlot: selectedFolderSlot
     };
 
     localStorage.setItem('ytDownloaderSettings', JSON.stringify(settings));
-    folderPath.value = settings.defaultFolder;
+
+    // Update button labels after save
+    folderQuickBtns.forEach(btn => {
+        const slot = btn.dataset.folderSlot;
+        if (slot === '1' && settings.folderPreset1) {
+            btn.querySelector('span').textContent = settings.folderPreset1;
+        } else if (slot === '2' && settings.folderPreset2) {
+            btn.querySelector('span').textContent = settings.folderPreset2;
+        } else if (slot === '3' && settings.folderPreset3) {
+            btn.querySelector('span').textContent = settings.folderPreset3;
+        }
+    });
 
     showStatus('Paramètres enregistrés', 'success');
     setTimeout(() => {
@@ -205,10 +247,9 @@ closeSettingsBtn.addEventListener('click', () => {
 });
 
 saveSettingsBtn.addEventListener('click', saveSettings);
-// Save path preferences when changed
 folderPath.addEventListener('change', () => {
     const settings = JSON.parse(localStorage.getItem('ytDownloaderSettings') || '{}');
-    settings.currentFolder = folderPath.value.trim();
+    settings.customFolderPath = folderPath.value.trim();
     localStorage.setItem('ytDownloaderSettings', JSON.stringify(settings));
 });
 
@@ -216,6 +257,20 @@ pathTypeRadios.forEach(radio => {
     radio.addEventListener('change', () => {
         const settings = JSON.parse(localStorage.getItem('ytDownloaderSettings') || '{}');
         settings.pathType = radio.value;
+        localStorage.setItem('ytDownloaderSettings', JSON.stringify(settings));
+    });
+});
+
+// Folder quick select buttons
+folderQuickBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        folderQuickBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedFolderSlot = btn.dataset.folderSlot;
+
+        // Save selection
+        const settings = JSON.parse(localStorage.getItem('ytDownloaderSettings') || '{}');
+        settings.selectedFolderSlot = selectedFolderSlot;
         localStorage.setItem('ytDownloaderSettings', JSON.stringify(settings));
     });
 });
@@ -267,29 +322,40 @@ function getProjectPath(callback) {
 }
 
 function resolveFolderPath(callback) {
-    const pathType = document.querySelector('input[name="pathType"]:checked').value;
-    const folder = folderPath.value.trim();
+    const settings = JSON.parse(localStorage.getItem('ytDownloaderSettings') || '{}');
+    let folder;
 
-    if (pathType === 'absolute') {
-        callback(folder);
+    // Determine folder based on selected slot
+    if (selectedFolderSlot === 'custom') {
+        // Custom: use textbox value
+        const pathType = document.querySelector('input[name="pathType"]:checked').value;
+        folder = folderPath.value.trim();
+
+        if (pathType === 'absolute') {
+            callback(folder);
+            return;
+        }
     } else {
-        // Relative to project - go up one level from PROJETS folder
-        getProjectPath((projectPath) => {
-            if (!projectPath || projectPath === 'null') {
-                showStatus('Veuillez d\'abord enregistrer votre projet Premiere', 'warning');
-                callback(null);
-                return;
-            }
-
-            // Get project directory (e.g., D:\...\PROJETS)
-            const projectDir = projectPath.substring(0, projectPath.lastIndexOf('\\'));
-            // Go up one level to parent (e.g., D:\...\NomProjet)
-            const parentDir = projectDir.substring(0, projectDir.lastIndexOf('\\'));
-            // Append folder name
-            const fullPath = `${parentDir}\\${folder}`;
-            callback(fullPath);
-        });
+        // Preset: use preset value (always relative)
+        folder = settings[`folderPreset${selectedFolderSlot}`] || `Bouton ${selectedFolderSlot}`;
     }
+
+    // Relative path resolution
+    getProjectPath((projectPath) => {
+        if (!projectPath || projectPath === 'null') {
+            showStatus('Veuillez d\'abord enregistrer votre projet Premiere', 'warning');
+            callback(null);
+            return;
+        }
+
+        // Get project directory (e.g., D:\...\PROJETS)
+        const projectDir = projectPath.substring(0, projectPath.lastIndexOf('\\'));
+        // Go up one level to parent (e.g., D:\...\NomProjet)
+        const parentDir = projectDir.substring(0, projectDir.lastIndexOf('\\'));
+        // Append folder name
+        const fullPath = `${parentDir}\\${folder}`;
+        callback(fullPath);
+    });
 }
 
 // --- DOWNLOAD LOGIC ---
@@ -398,13 +464,28 @@ function importToPremiere(filePath, createBin) {
     }
     console.log(`File exists: YES`);
 
-    // Extract folder name from path (remove ./ ../ prefixes)
-    let binName = folderPath.value.trim() || 'YouTube Downloads';
-    // Remove all ./ and ../ prefixes to get just the folder name
-    binName = binName.replace(/^(\.\.?[\/\\])+/, '');
-    // If there's a path separator, get the last part
-    if (binName.includes('\\') || binName.includes('/')) {
-        binName = binName.split(/[\/\\]/).pop();
+    // Determine bin name based on selected folder slot
+    const settings = JSON.parse(localStorage.getItem('ytDownloaderSettings') || '{}');
+    let binName;
+
+    if (selectedFolderSlot === 'custom') {
+        // Custom: use textbox value
+        binName = folderPath.value.trim() || 'YouTube Downloads';
+        // Remove all ./ and ../ prefixes to get just the folder name
+        binName = binName.replace(/^(\.\.?[\/\\])+/, '');
+        // If there's a path separator, get the last part
+        if (binName.includes('\\') || binName.includes('/')) {
+            binName = binName.split(/[\/\\]/).pop();
+        }
+    } else {
+        // Preset: use preset value
+        binName = settings[`folderPreset${selectedFolderSlot}`] || `Bouton ${selectedFolderSlot}`;
+        // Remove all ./ and ../ prefixes to get just the folder name
+        binName = binName.replace(/^(\.\.?[\/\\])+/, '');
+        // If there's a path separator, get the last part
+        if (binName.includes('\\') || binName.includes('/')) {
+            binName = binName.split(/[\/\\]/).pop();
+        }
     }
     console.log(`Bin name: ${binName}`);
 

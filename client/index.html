@@ -108,7 +108,21 @@
             </div>
 
             <div class="folder-section">
-                <label for="folderPath">Dossier de destination</label>
+                <label>Dossier de destination</label>
+                <div class="folder-quick-select">
+                    <button class="folder-quick-btn active" data-folder-slot="1">
+                        <span>Bouton 1</span>
+                    </button>
+                    <button class="folder-quick-btn" data-folder-slot="2">
+                        <span>Bouton 2</span>
+                    </button>
+                    <button class="folder-quick-btn" data-folder-slot="3">
+                        <span>Bouton 3</span>
+                    </button>
+                    <button class="folder-quick-btn" data-folder-slot="custom">
+                        <span>Personnalisé</span>
+                    </button>
+                </div>
                 <div class="folder-controls">
                     <div class="input-wrapper">
                         <svg class="input-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -190,8 +204,16 @@
             </div>
             <div class="settings-content">
                 <div class="setting-item">
-                    <label for="defaultFolder">Dossier par défaut</label>
-                    <input type="text" id="defaultFolder" placeholder="ELEMENTS" />
+                    <label for="folderPreset1">Dossier rapide 1</label>
+                    <input type="text" id="folderPreset1" placeholder="MEDIAS" />
+                </div>
+                <div class="setting-item">
+                    <label for="folderPreset2">Dossier rapide 2</label>
+                    <input type="text" id="folderPreset2" placeholder="ELEMENTS" />
+                </div>
+                <div class="setting-item">
+                    <label for="folderPreset3">Dossier rapide 3</label>
+                    <input type="text" id="folderPreset3" placeholder="AUDIO" />
                 </div>
                 <div class="setting-item">
                     <label for="defaultFormat">Format par défaut</label>
