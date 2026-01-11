@@ -4,12 +4,18 @@
 
 ### Installation
 
-**Option 1: Automated (Recommended)**
-1. Right-click `INSTALL.bat` → Run as administrator
+**Windows (Automated)**
+1. Right-click `INSTALL_WINDOWS.bat` → Run as administrator
 2. Follow on-screen instructions
 3. Restart Premiere Pro
 
-**Option 2: Manual**
+**macOS (Automated)**
+1. Open Terminal in the extension folder
+2. Run: `sudo ./INSTALL_MACOS.sh`
+3. Follow on-screen instructions
+4. Restart Premiere Pro
+
+**Manual Installation**
 See [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md) for detailed instructions
 
 ### Verify Installation
@@ -50,7 +56,7 @@ Run `CHECK_DEPENDENCIES.bat` to verify all dependencies are installed
 - yt-dlp
 - ffmpeg
 
-All dependencies can be installed automatically with `INSTALL.bat`
+All dependencies can be installed automatically with `INSTALL_WINDOWS.bat` or `INSTALL_MACOS.sh`
 
 ---
 
@@ -100,8 +106,9 @@ For more troubleshooting, see [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md)
 
 ## 📄 Files
 
-- `INSTALL.bat` - Automated installer (run as admin)
-- `CHECK_DEPENDENCIES.bat` - Verify dependencies
+- `INSTALL_WINDOWS.bat` - Automated installer for Windows (run as admin)
+- `INSTALL_MACOS.sh` - Automated installer for macOS (run with sudo)
+- `CHECK_DEPENDENCIES.bat` - Verify dependencies (Windows)
 - `INSTALLATION_GUIDE.md` - Detailed installation instructions
 - `client/` - Extension UI and logic
 - `host/` - Premiere Pro integration (ExtendScript)
