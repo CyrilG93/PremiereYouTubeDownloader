@@ -216,6 +216,25 @@ async function downloadVideo(options) {
 function buildYtDlpArgs(url, format, destination, startTime, endTime) {
     const args = [url];
 
+    // Determine ffmpeg path for yt-dlp post-processing
+    // On macOS, Adobe CEP doesn't have access to Homebrew PATH
+    let ffmpegPath = 'ffmpeg';
+    if (os.platform() === 'darwin') {
+        const macPaths = [
+            '/opt/homebrew/bin/ffmpeg',  // Apple Silicon Homebrew
+            '/usr/local/bin/ffmpeg',      // Intel Homebrew
+            '/usr/bin/ffmpeg'             // System install
+        ];
+        for (const p of macPaths) {
+            if (fs.existsSync(p)) {
+                ffmpegPath = p;
+                break;
+            }
+        }
+    }
+    // Tell yt-dlp where to find ffmpeg
+    args.push('--ffmpeg-location', path.dirname(ffmpegPath));
+
     // Format selection
     if (format === 'audio') {
         args.push('-f', 'bestaudio/best');
