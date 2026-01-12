@@ -348,12 +348,13 @@ function resolveFolderPath(callback) {
             return;
         }
 
-        // Get project directory (e.g., D:\...\PROJETS)
-        const projectDir = projectPath.substring(0, projectPath.lastIndexOf('\\'));
-        // Go up one level to parent (e.g., D:\...\NomProjet)
-        const parentDir = projectDir.substring(0, projectDir.lastIndexOf('\\'));
-        // Append folder name
-        const fullPath = `${parentDir}\\${folder}`;
+        // Cross-platform path handling using path module
+        // Get project directory (e.g., D:\...\PROJETS or /Users/.../PROJETS)
+        const projectDir = path.dirname(projectPath);
+        // Go up one level to parent (e.g., D:\...\NomProjet or /Users/.../NomProjet)
+        const parentDir = path.dirname(projectDir);
+        // Append folder name using platform-appropriate separator
+        const fullPath = path.join(parentDir, folder);
         callback(fullPath);
     });
 }
