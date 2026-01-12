@@ -24,9 +24,9 @@ function findOrCreateBin(binPath) {
     var project = app.project;
     var currentParent = project.rootItem;
 
-    // Split path by / or \ to handle nested folders
-    var pathSeparator = binPath.indexOf('/') !== -1 ? '/' : '\\';
-    var binParts = binPath.split(pathSeparator);
+    // Split path by both / and \ to handle nested folders on any platform
+    // This regex handles both forward and back slashes
+    var binParts = binPath.split(/[\/\\]/);
 
     // Handle paths that start with ./ or ../
     var cleanParts = [];
