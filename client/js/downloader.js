@@ -266,6 +266,9 @@ function buildYtDlpArgs(url, format, destination, startTime, endTime) {
     // Ignore errors
     args.push('--ignore-errors');
 
+    // Skip SSL certificate verification (for corporate networks/VPNs with self-signed certs)
+    args.push('--no-check-certificate');
+
     // Add time range if specified
     if (startTime !== undefined && endTime !== undefined) {
         // Convert seconds to HH:MM:SS format
