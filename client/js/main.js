@@ -470,25 +470,17 @@ function importToPremiere(filePath, createBin) {
     let binName;
 
     if (selectedFolderSlot === 'custom') {
-        // Custom: use textbox value
+        // Custom: use textbox value (keep full path for nested bins)
         binName = folderPath.value.trim() || 'YouTube Downloads';
-        // Remove all ./ and ../ prefixes to get just the folder name
-        binName = binName.replace(/^(\.\.?[\/\\])+/, '');
-        // If there's a path separator, get the last part
-        if (binName.includes('\\') || binName.includes('/')) {
-            binName = binName.split(/[\/\\]/).pop();
-        }
+        // Remove leading ./ and ../ prefixes only
+        binName = binName.replace(/^(\.\.?[\\/\\\\])+/, '');
     } else {
-        // Preset: use preset value
+        // Preset: use preset value (keep full path for nested bins)
         binName = settings[`folderPreset${selectedFolderSlot}`] || `Bouton ${selectedFolderSlot}`;
-        // Remove all ./ and ../ prefixes to get just the folder name
-        binName = binName.replace(/^(\.\.?[\/\\])+/, '');
-        // If there's a path separator, get the last part
-        if (binName.includes('\\') || binName.includes('/')) {
-            binName = binName.split(/[\/\\]/).pop();
-        }
+        // Remove leading ./ and ../ prefixes only
+        binName = binName.replace(/^(\.\.?[\\/\\\\])+/, '');
     }
-    console.log(`Bin name: ${binName}`);
+    console.log(`Bin path: ${binName}`);
 
     const escapedPath = filePath.replace(/\\/g, '\\\\');
     console.log(`Escaped path: ${escapedPath}`);

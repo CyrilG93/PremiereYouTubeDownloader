@@ -19,21 +19,48 @@ function selectFolder() {
     return null;
 }
 
-// Find or create bin
-function findOrCreateBin(binName) {
+// Find or create bin (supports nested paths like "MEDIAS/Test")
+function findOrCreateBin(binPath) {
     var project = app.project;
-    var rootItem = project.rootItem;
+    var currentParent = project.rootItem;
 
-    // Search for existing bin
-    for (var i = 0; i < rootItem.children.numItems; i++) {
-        var item = rootItem.children[i];
-        if (item.type === ProjectItemType.BIN && item.name === binName) {
-            return item;
+    // Split path by / or \ to handle nested folders
+    var pathSeparator = binPath.indexOf('/') !== -1 ? '/' : '\\';
+    var binParts = binPath.split(pathSeparator);
+
+    // Handle paths that start with ./ or ../
+    var cleanParts = [];
+    for (var i = 0; i < binParts.length; i++) {
+        var part = binParts[i];
+        if (part !== '' && part !== '.' && part !== '..') {
+            cleanParts.push(part);
         }
     }
 
-    // Create new bin
-    return rootItem.createBin(binName);
+    // Create each level of the hierarchy
+    for (var j = 0; j < cleanParts.length; j++) {
+        var binName = cleanParts[j];
+        var foundBin = null;
+
+        // Search for existing bin at current level
+        for (var k = 0; k < currentParent.children.numItems; k++) {
+            var item = currentParent.children[k];
+            if (item.type === ProjectItemType.BIN && item.name === binName) {
+                foundBin = item;
+                break;
+            }
+        }
+
+        // Create bin if not found
+        if (!foundBin) {
+            foundBin = currentParent.createBin(binName);
+        }
+
+        // Move to next level
+        currentParent = foundBin;
+    }
+
+    return currentParent;
 }
 
 // Import media file into Premiere Pro
