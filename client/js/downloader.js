@@ -29,10 +29,29 @@ async function downloadVideo(options) {
             // Build yt-dlp command
             const args = buildYtDlpArgs(url, format, destination, startTime, endTime);
 
+            // Determine yt-dlp executable path based on platform
+            // On macOS, Adobe CEP doesn't have access to Homebrew PATH
+            let ytDlpPath = 'yt-dlp';
+            if (os.platform() === 'darwin') {
+                // Check common macOS installation paths
+                const macPaths = [
+                    '/opt/homebrew/bin/yt-dlp',  // Apple Silicon Homebrew
+                    '/usr/local/bin/yt-dlp',      // Intel Homebrew
+                    '/usr/bin/yt-dlp'             // System install
+                ];
+                for (const p of macPaths) {
+                    if (fs.existsSync(p)) {
+                        ytDlpPath = p;
+                        break;
+                    }
+                }
+            }
+
             console.log('Executing yt-dlp with args:', args);
+            console.log('Using yt-dlp path:', ytDlpPath);
 
             // Spawn yt-dlp process
-            const ytDlp = spawn('yt-dlp', args, {
+            const ytDlp = spawn(ytDlpPath, args, {
                 cwd: destination,
                 windowsHide: true,
                 shell: false
@@ -287,7 +306,25 @@ function trimVideo(inputFile, startTime, endTime, callback) {
         ];
 
         console.log('Executing ffmpeg with args:', args);
-        const ffmpeg = spawn('ffmpeg', args, { shell: false });
+
+        // Determine ffmpeg executable path based on platform
+        let ffmpegPath = 'ffmpeg';
+        if (os.platform() === 'darwin') {
+            const macPaths = [
+                '/opt/homebrew/bin/ffmpeg',  // Apple Silicon Homebrew
+                '/usr/local/bin/ffmpeg',      // Intel Homebrew
+                '/usr/bin/ffmpeg'             // System install
+            ];
+            for (const p of macPaths) {
+                if (fs.existsSync(p)) {
+                    ffmpegPath = p;
+                    break;
+                }
+            }
+        }
+        console.log('Using ffmpeg path:', ffmpegPath);
+
+        const ffmpeg = spawn(ffmpegPath, args, { shell: false });
 
         ffmpeg.on('close', (code) => {
             if (code === 0 && fs.existsSync(outputFile)) {
