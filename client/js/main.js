@@ -199,7 +199,7 @@ function saveSettings() {
         }
     });
 
-    showStatus('Paramètres enregistrés', 'success');
+    showStatus(i18n.get('settingsSaved'), 'success');
     setTimeout(() => {
         settingsPanel.classList.remove('active');
     }, 1000);
@@ -343,7 +343,7 @@ function resolveFolderPath(callback) {
     // Relative path resolution
     getProjectPath((projectPath) => {
         if (!projectPath || projectPath === 'null') {
-            showStatus('Veuillez d\'abord enregistrer votre projet Premiere', 'warning');
+            showStatus(i18n.get('errorSaveProject'), 'warning');
             callback(null);
             return;
         }
@@ -362,34 +362,34 @@ function resolveFolderPath(callback) {
 // --- DOWNLOAD LOGIC ---
 async function downloadVideo() {
     if (!downloader) {
-        showStatus('Erreur critique: Module de téléchargement non chargé', 'error');
+        showStatus(i18n.get('errorCritical'), 'error');
         return;
     }
 
     const url = urlInput.value.trim();
 
     if (!url) {
-        showStatus('Veuillez entrer une URL YouTube', 'error');
+        showStatus(i18n.get('errorEnterUrl'), 'error');
         return;
     }
 
     if (!isValidYouTubeUrl(url)) {
-        showStatus('URL YouTube invalide', 'error');
+        showStatus(i18n.get('errorInvalidUrl'), 'error');
         return;
     }
 
     resolveFolderPath(async (destinationPath) => {
         if (!destinationPath) {
-            showStatus('Veuillez choisir un dossier de destination valide', 'error');
+            showStatus(i18n.get('errorSelectFolder'), 'error');
             return;
         }
 
         isDownloading = true;
         downloadBtn.classList.add('downloading');
-        downloadBtn.querySelector('span').textContent = 'Téléchargement...';
+        downloadBtn.querySelector('span').textContent = i18n.get('downloading');
         cancelBtn.classList.add('active');
         progressContainer.classList.add('active');
-        updateProgress(0, 'Initialisation...');
+        updateProgress(0, i18n.get('initializing'));
 
         downloadAbortController = new AbortController();
 
@@ -403,7 +403,7 @@ async function downloadVideo() {
                     updateProgress(data.progress, data.status);
                 },
                 onComplete: (filePath) => {
-                    updateProgress(100, 'Téléchargement terminé');
+                    updateProgress(100, i18n.get('downloadComplete'));
 
                     const settings = JSON.parse(localStorage.getItem('ytDownloaderSettings') || '{}');
                     if (settings.autoImport !== false) {
@@ -411,7 +411,7 @@ async function downloadVideo() {
                             importToPremiere(filePath, settings.createBin !== false);
                         }, 500);
                     } else {
-                        showStatus('Téléchargement terminé avec succès', 'success');
+                        showStatus(i18n.get('downloadSuccess'), 'success');
                         resetDownloadButton();
                     }
                 },
@@ -426,7 +426,7 @@ async function downloadVideo() {
 
                 if (start !== null && end !== null) {
                     if (end <= start) {
-                        showStatus('Le temps de fin doit être après le temps de début', 'error');
+                        showStatus(i18n.get('errorEndTime'), 'error');
                         resetDownloadButton();
                         return;
                     }
@@ -439,7 +439,7 @@ async function downloadVideo() {
 
         } catch (error) {
             if (error.message === 'Download cancelled' || error.name === 'AbortError') {
-                showStatus('Téléchargement annulé', 'warning');
+                showStatus(i18n.get('cancelled'), 'warning');
             } else {
                 showStatus(`Erreur: ${error.message}`, 'error');
             }
@@ -459,7 +459,7 @@ function importToPremiere(filePath, createBin) {
     const fs = require('fs');
     if (!fs.existsSync(filePath)) {
         console.error(`ERROR: File does not exist at path: ${filePath}`);
-        showStatus('Erreur: Fichier introuvable pour import', 'error');
+        showStatus(i18n.get('errorFileNotFound'), 'error');
         resetDownloadButton();
         return;
     }
@@ -491,11 +491,11 @@ function importToPremiere(filePath, createBin) {
     csInterface.evalScript(scriptCommand, (result) => {
         console.log(`Import result from ExtendScript: ${result}`);
         if (result === 'success') {
-            showStatus('Importé dans Premiere avec succès', 'success');
+            showStatus(i18n.get('importedSuccess'), 'success');
         } else {
             // Log error but don't show popup since file is downloaded successfully
             console.error(`Import failed with result: ${result}`);
-            showStatus('Téléchargement terminé avec succès', 'success');
+            showStatus(i18n.get('downloadSuccess'), 'success');
         }
         resetDownloadButton();
     });
@@ -504,7 +504,7 @@ function importToPremiere(filePath, createBin) {
 function resetDownloadButton() {
     isDownloading = false;
     downloadBtn.classList.remove('downloading');
-    downloadBtn.querySelector('span').textContent = 'Télécharger';
+    downloadBtn.querySelector('span').textContent = i18n.get('download');
     cancelBtn.classList.remove('active');
     downloadAbortController = null;
     setTimeout(() => {
@@ -521,14 +521,63 @@ downloadBtn.addEventListener('click', () => {
 cancelBtn.addEventListener('click', () => {
     if (isDownloading && downloadAbortController) {
         downloadAbortController.abort();
-        updateProgress(0, 'Annulation...');
+        updateProgress(0, i18n.get('cancelling'));
     }
 });
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize i18n first
+    i18n.init();
+    initLanguageDropdown();
+
     loadSettings();
 });
+
+// --- LANGUAGE DROPDOWN ---
+function initLanguageDropdown() {
+    const languageSelector = document.getElementById('languageSelector');
+    const currentLangBtn = document.getElementById('currentLangBtn');
+    const languageDropdown = document.getElementById('languageDropdown');
+
+    if (!languageSelector || !currentLangBtn || !languageDropdown) return;
+
+    // Populate dropdown with available languages
+    const languages = i18n.getLanguages();
+    languageDropdown.innerHTML = '';
+
+    Object.entries(languages).forEach(([code, lang]) => {
+        const btn = document.createElement('button');
+        btn.setAttribute('data-lang', code);
+        btn.textContent = `${lang.flag} ${lang.name}`;
+        if (code === i18n.getCurrentLanguage()) {
+            btn.classList.add('active');
+        }
+        btn.addEventListener('click', () => {
+            i18n.setLanguage(code);
+            // Update active state
+            languageDropdown.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            // Close dropdown
+            languageSelector.classList.remove('active');
+        });
+        languageDropdown.appendChild(btn);
+    });
+
+    // Set initial flag
+    currentLangBtn.textContent = languages[i18n.getCurrentLanguage()].flag;
+
+    // Toggle dropdown on button click
+    currentLangBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        languageSelector.classList.toggle('active');
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', () => {
+        languageSelector.classList.remove('active');
+    });
+}
 
 // Time input formatting
 function formatTimeInput(input) {
