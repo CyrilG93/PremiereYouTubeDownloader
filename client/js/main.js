@@ -555,6 +555,8 @@ function initLanguageDropdown() {
         }
         btn.addEventListener('click', () => {
             i18n.setLanguage(code);
+            // Restore custom folder preset names after language change
+            loadSettings();
             // Update active state
             languageDropdown.querySelectorAll('button').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
