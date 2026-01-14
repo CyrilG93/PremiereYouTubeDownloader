@@ -1,25 +1,84 @@
 # YouTube Downloader for Premiere Pro
 
-## 📥 Quick Start
+Download YouTube videos directly into your Adobe Premiere Pro project.
 
-### Installation
+---
 
-**Windows (Automated)**
-1. Right-click `INSTALL_WINDOWS.bat` → Run as administrator
-2. Follow on-screen instructions
-3. Restart Premiere Pro
+## 📋 Requirements
 
-**macOS (Automated)**
-1. Open Terminal in the extension folder
-2. Run: `sudo ./INSTALL_MACOS.sh`
-3. Follow on-screen instructions
-4. Restart Premiere Pro
+This extension needs the following tools installed on your computer:
 
-**Manual Installation**
-See [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md) for detailed instructions
+| Tool | Why is it needed? |
+|------|-------------------|
+| **Node.js** | Required by Adobe CEP to run the extension's JavaScript code |
+| **Python 3** | Required to run yt-dlp (the YouTube download tool) |
+| **yt-dlp** | Downloads videos from YouTube (installed via Python pip) |
+| **ffmpeg** | Converts video/audio to formats compatible with Premiere Pro |
 
-### Verify Installation
-Run `CHECK_DEPENDENCIES.bat` to verify all dependencies are installed
+---
+
+## 🚀 Installation
+
+### Option 1: Automated Installation (Recommended)
+
+The installer scripts will:
+- ✅ Check if Node.js is installed (you must install it manually if missing)
+- ✅ Check if Python is installed (you must install it manually if missing)
+- ✅ Install yt-dlp automatically via pip
+- ✅ Check if ffmpeg is installed (you must install it manually if missing)
+- ✅ Copy extension files to the correct Adobe folder
+- ✅ Enable CEP debug mode (required for unsigned extensions)
+
+#### Windows
+
+1. **First install prerequisites** (if not already installed):
+   - [Download Node.js](https://nodejs.org/) → Install with default options
+   - [Download Python](https://www.python.org/downloads/) → **⚠️ Check "Add Python to PATH"**
+   - [Download ffmpeg](https://www.gyan.dev/ffmpeg/builds/) → See "Installing ffmpeg on Windows" below
+
+2. **Run the installer**:
+   - Right-click `INSTALL_WINDOWS.bat` → **Run as administrator**
+   - Follow on-screen instructions
+
+3. **Restart Premiere Pro**
+
+#### macOS
+
+1. **First install prerequisites** (if not already installed):
+   ```bash
+   # Install Homebrew (if not installed)
+   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+   
+   # Install all dependencies at once
+   brew install node python ffmpeg
+   ```
+
+2. **Run the installer**:
+   ```bash
+   cd /path/to/PremiereYouTubeDownloader
+   sudo ./INSTALL_MACOS.sh
+   ```
+
+3. **Restart Premiere Pro**
+
+---
+
+### Option 2: Manual Installation
+
+See [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md) for detailed step-by-step instructions.
+
+---
+
+## ✅ Verify Installation
+
+### Windows
+Run `CHECK_DEPENDENCIES.bat` to verify all dependencies are installed.
+
+### macOS
+Run in Terminal:
+```bash
+./CHECK_DEPENDENCIES.sh
+```
 
 ---
 
@@ -44,75 +103,93 @@ Run `CHECK_DEPENDENCIES.bat` to verify all dependencies are installed
 - ✅ Time range selection (download specific sections)
 - ✅ Auto-import into project bins
 - ✅ Relative or absolute path support
+- ✅ Multi-language support (English/French)
 
 ---
 
-## 🔧 Requirements
+## 🔧 Installing ffmpeg on Windows
 
-- Windows 10/11 (64-bit)
-- Adobe Premiere Pro 2020 or later
-- Node.js
-- Python 3.11+
-- yt-dlp
-- ffmpeg
+ffmpeg requires manual installation on Windows:
 
-All dependencies can be installed automatically with `INSTALL_WINDOWS.bat` or `INSTALL_MACOS.sh`
+1. Download from: https://www.gyan.dev/ffmpeg/builds/ (choose "ffmpeg-release-essentials.zip")
+2. Extract the ZIP file
+3. Copy the `bin` folder contents to `C:\ffmpeg\bin\`
+4. Add to system PATH:
+   - Press `Win + X` → System → Advanced system settings
+   - Click "Environment Variables"
+   - Under "System variables", find and select "Path", click "Edit"
+   - Click "New" and add: `C:\ffmpeg\bin`
+   - Click OK on all windows
+5. Restart your terminal/command prompt
+6. Verify: `ffmpeg -version`
 
 ---
 
 ## 🐛 Troubleshooting
 
-### Common Issues
+### Extension doesn't appear in Premiere Pro
 
-**Extension doesn't appear**
+**Windows:**
 - Verify installation location: `C:\Program Files\Common Files\Adobe\CEP\extensions\PremiereYouTubeDownloader`
-- Enable debug mode (see INSTALLATION_GUIDE.md)
-- Restart Premiere Pro
+- Check Registry: `HKEY_CURRENT_USER\Software\Adobe\CSXS.11` should have `PlayerDebugMode` = `1`
 
-**Download fails**
-- Run `CHECK_DEPENDENCIES.bat` to verify all dependencies
-- Check the logs (click "Logs" button in extension)
-- Ensure you have internet connection
+**macOS:**
+- Verify installation location: `/Library/Application Support/Adobe/CEP/extensions/PremiereYouTubeDownloader`
+- Run: `defaults read com.adobe.CSXS.11 PlayerDebugMode` (should return `1`)
 
-**No audio in Premiere Pro**
-- ✅ Fixed in latest version (automatic AAC conversion)
+### "yt-dlp not found" error
+
+```bash
+# Windows
+pip install --upgrade yt-dlp
+
+# macOS
+pip3 install --upgrade yt-dlp
+```
+
+### "ffmpeg not found" error
+
+**Windows:** Follow the "Installing ffmpeg on Windows" section above
+
+**macOS:**
+```bash
+brew install ffmpeg
+```
+
+### Download fails or no audio
+
 - Verify ffmpeg is installed: `ffmpeg -version`
-
-**VP9 codec error**
-- ✅ Fixed in latest version (VP9 excluded, H.264 only)
 - Update yt-dlp: `pip install --upgrade yt-dlp`
-
-For more troubleshooting, see [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md)
+- Check the logs in the extension (click "Logs" button)
 
 ---
 
 ## 📝 Recent Updates
 
 ### Version 2.2 (Latest)
-- ✅ **Folder Quick-Select Buttons**: 4 destination buttons for fast folder switching
+- ✅ Multi-language support (English/French)
+- ✅ Folder Quick-Select Buttons: 4 destination buttons
 - ✅ 3 customizable preset folders in settings
-- ✅ 1 "Custom" button for manual path entry
-- ✅ Presets use relative paths (e.g., `./MEDIAS`)
-- ✅ Proper bin naming in Premiere (strips `./` prefixes)
 
 ### Version 2.1
 - ✅ Fixed MP4 file detection and import
 - ✅ Excluded VP9 codec (only H.264 downloaded)
 - ✅ Added automatic AAC audio conversion
-- ✅ Improved logging and error messages
-- ✅ Added comprehensive installation package
 
 ---
 
 ## 📄 Files
 
-- `INSTALL_WINDOWS.bat` - Automated installer for Windows (run as admin)
-- `INSTALL_MACOS.sh` - Automated installer for macOS (run with sudo)
-- `CHECK_DEPENDENCIES.bat` - Verify dependencies (Windows)
-- `INSTALLATION_GUIDE.md` - Detailed installation instructions
-- `client/` - Extension UI and logic
-- `host/` - Premiere Pro integration (ExtendScript)
-- `CSXS/` - Extension manifest
+| File | Description |
+|------|-------------|
+| `INSTALL_WINDOWS.bat` | Automated installer for Windows (run as admin) |
+| `INSTALL_MACOS.sh` | Automated installer for macOS (run with sudo) |
+| `CHECK_DEPENDENCIES.bat` | Verify dependencies (Windows) |
+| `CHECK_DEPENDENCIES.sh` | Verify dependencies (macOS) |
+| `INSTALLATION_GUIDE.md` | Detailed manual installation instructions |
+| `client/` | Extension UI and logic |
+| `host/` | Premiere Pro integration (ExtendScript) |
+| `CSXS/` | Extension manifest |
 
 ---
 
@@ -122,14 +199,6 @@ For more troubleshooting, see [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md)
 - Uses [yt-dlp](https://github.com/yt-dlp/yt-dlp) for downloading
 - Uses [ffmpeg](https://ffmpeg.org/) for media processing
 - Powered by Node.js
-
----
-
-## 📞 Support
-
-1. Check logs in the extension (click "Logs" button)
-2. Run `CHECK_DEPENDENCIES.bat`
-3. See [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md) for troubleshooting
 
 ---
 
