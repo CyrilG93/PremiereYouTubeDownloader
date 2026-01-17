@@ -13,6 +13,8 @@ This extension needs the following tools installed on your computer:
 | **Node.js** | Required by Adobe CEP to run the extension's JavaScript code |
 | **Python 3** | Required to run yt-dlp (the YouTube download tool) |
 | **yt-dlp** | Downloads videos from YouTube (installed via Python pip) |
+| **yt-dlp-ejs** | Solves YouTube's JavaScript challenges (installed with yt-dlp) |
+| **Deno** | JavaScript runtime for yt-dlp challenge solving |
 | **ffmpeg** | Converts video/audio to formats compatible with Premiere Pro |
 
 ---
@@ -24,7 +26,8 @@ This extension needs the following tools installed on your computer:
 The installer scripts will:
 - ✅ Check if Node.js is installed (you must install it manually if missing)
 - ✅ Check if Python is installed (you must install it manually if missing)
-- ✅ Install yt-dlp automatically via pip
+- ✅ Install yt-dlp with EJS support automatically via pip
+- ✅ Install Deno automatically (for YouTube n-challenge solving)
 - ✅ Check if ffmpeg is installed (you must install it manually if missing)
 - ✅ Copy extension files to the correct Adobe folder
 - ✅ Enable CEP debug mode (required for unsigned extensions)
@@ -156,17 +159,44 @@ pip3 install --upgrade yt-dlp
 brew install ffmpeg
 ```
 
+### Download fails with "n challenge solving failed"
+
+This error means yt-dlp can't solve YouTube's JavaScript challenges. Fix:
+
+1. Install Deno: Run the installer again, or manually install from https://deno.land/
+2. Update yt-dlp with EJS support:
+   ```bash
+   pip install --upgrade "yt-dlp[default]"
+   ```
+3. If auto-detection fails, configure custom paths in **Settings → Advanced Tools**
+
 ### Download fails or no audio
 
 - Verify ffmpeg is installed: `ffmpeg -version`
-- Update yt-dlp: `pip install --upgrade yt-dlp`
+- Update yt-dlp: `pip install --upgrade "yt-dlp[default]"`
 - Check the logs in the extension (click "Logs" button)
+
+### Tools not found (custom paths)
+
+If the extension can't find yt-dlp, ffmpeg, or deno:
+1. Open the extension in Premiere Pro
+2. Click the **Settings** (⚙️) button
+3. Scroll to **Advanced Tools** section
+4. Enter the full path to each executable
+5. Click **Save**
 
 ---
 
 ## 📝 Recent Updates
 
-### Version 2.2 (Latest)
+### Version 2.3 (Latest)
+- ✅ **Custom tool paths in Settings**: Configure yt-dlp, ffmpeg, and deno paths manually
+- ✅ Auto-detection of tools in common installation locations
+- ✅ Installer now installs Deno automatically
+- ✅ Installer now installs yt-dlp with EJS support for YouTube compatibility
+- ✅ Better error messages when tools are not found
+
+### Version 2.2
 - ✅ Multi-language support (English/French)
 - ✅ Folder Quick-Select Buttons: 4 destination buttons
 - ✅ 3 customizable preset folders in settings

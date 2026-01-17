@@ -1,13 +1,13 @@
 @echo off
 :: YouTube Downloader for Premiere Pro - Simple Installer
-:: Version 2.1
+:: Version 2.3
 
 title YouTube Downloader Installer
 
 echo.
 echo ========================================
 echo YouTube Downloader for Premiere Pro
-echo Installation Package v2.1
+echo Installation Package v2.3
 echo ========================================
 echo.
 
@@ -56,7 +56,7 @@ if /I "%SOURCE_DIR:~0,-1%"=="%EXTENSION_PATH%" (
 
 echo.
 echo ========================================
-echo Step 1/4: Checking Node.js
+echo Step 1/5: Checking Node.js
 echo ========================================
 echo.
 
@@ -76,7 +76,7 @@ if %errorlevel% EQU 0 (
 
 echo.
 echo ========================================
-echo Step 2/4: Checking Python
+echo Step 2/5: Checking Python
 echo ========================================
 echo.
 
@@ -97,30 +97,50 @@ if %errorlevel% EQU 0 (
 
 echo.
 echo ========================================
-echo Step 3/4: Installing yt-dlp
+echo Step 3/5: Installing yt-dlp with EJS support
 echo ========================================
 echo.
 
-yt-dlp --version >nul 2>&1
-if %errorlevel% EQU 0 (
-    echo [OK] yt-dlp already installed
-    echo Updating to latest version...
-    python -m pip install --upgrade yt-dlp --quiet
-) else (
-    echo Installing yt-dlp...
-    python -m pip install yt-dlp --quiet
+echo Installing/updating yt-dlp with all dependencies...
+python -m pip install --upgrade "yt-dlp[default]" --quiet 2>nul
+if %errorlevel% NEQ 0 (
+    echo Trying alternative installation method...
+    python -m pip install --upgrade yt-dlp yt-dlp-ejs --quiet
 )
 
 yt-dlp --version >nul 2>&1
 if %errorlevel% EQU 0 (
     for /f "tokens=*" %%i in ('yt-dlp --version') do echo [OK] yt-dlp version: %%i
+    echo [OK] yt-dlp-ejs package included for YouTube compatibility
 ) else (
     echo [WARNING] yt-dlp installation may have failed
 )
 
 echo.
 echo ========================================
-echo Step 4/4: Checking ffmpeg
+echo Step 4/5: Installing Deno (for YouTube challenges)
+echo ========================================
+echo.
+
+:: Check if deno is already installed
+set "DENO_PATH=%USERPROFILE%\.deno\bin\deno.exe"
+if exist "%DENO_PATH%" (
+    echo [OK] Deno already installed at: %DENO_PATH%
+) else (
+    echo Installing Deno...
+    powershell -Command "irm https://deno.land/install.ps1 | iex" >nul 2>&1
+    if exist "%DENO_PATH%" (
+        echo [OK] Deno installed successfully!
+    ) else (
+        echo [WARNING] Deno installation may have failed
+        echo You can install manually from: https://deno.land/
+        echo Or configure a custom path in the extension settings.
+    )
+)
+
+echo.
+echo ========================================
+echo Step 5/5: Checking ffmpeg
 echo ========================================
 echo.
 
@@ -136,7 +156,7 @@ if %errorlevel% EQU 0 (
     echo 3. Copy bin folder contents to C:\ffmpeg\bin\
     echo 4. Add C:\ffmpeg\bin to system PATH
     echo.
-    echo After installation, run this installer again.
+    echo Or configure a custom path in the extension settings.
     echo.
     echo Press any key to continue anyway...
     pause >nul
