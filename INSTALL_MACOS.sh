@@ -1,11 +1,11 @@
 #!/bin/bash
 # YouTube Downloader for Premiere Pro - macOS Installer
-# Version 2.2
+# Version 2.3
 
 echo ""
 echo "========================================"
 echo "YouTube Downloader for Premiere Pro"
-echo "Installation Package v2.2 - macOS"
+echo "Installation Package v2.3 - macOS"
 echo "========================================"
 echo ""
 
@@ -48,7 +48,7 @@ fi
 
 echo ""
 echo "========================================"
-echo "Step 1/4: Checking Node.js"
+echo "Step 1/5: Checking Node.js"
 echo "========================================"
 echo ""
 
@@ -67,7 +67,7 @@ fi
 
 echo ""
 echo "========================================"
-echo "Step 2/4: Checking Python"
+echo "Step 2/5: Checking Python"
 echo "========================================"
 echo ""
 
@@ -89,29 +89,55 @@ fi
 
 echo ""
 echo "========================================"
-echo "Step 3/4: Installing yt-dlp"
+echo "Step 3/5: Installing yt-dlp with EJS support"
 echo "========================================"
 echo ""
 
 if command -v yt-dlp &> /dev/null; then
     echo "[OK] yt-dlp already installed"
     echo "Updating to latest version..."
-    python3 -m pip install --upgrade yt-dlp --quiet 2>/dev/null || pip3 install --upgrade yt-dlp --quiet
+    python3 -m pip install --upgrade "yt-dlp[default]" --quiet 2>/dev/null || pip3 install --upgrade "yt-dlp[default]" --quiet
 else
     echo "Installing yt-dlp..."
-    python3 -m pip install yt-dlp --quiet 2>/dev/null || pip3 install yt-dlp --quiet
+    python3 -m pip install "yt-dlp[default]" --quiet 2>/dev/null || pip3 install "yt-dlp[default]" --quiet
 fi
 
 if command -v yt-dlp &> /dev/null; then
     YTDLP_VERSION=$(yt-dlp --version)
     echo "[OK] yt-dlp version: $YTDLP_VERSION"
+    echo "[OK] yt-dlp-ejs package included for YouTube compatibility"
 else
     echo "[WARNING] yt-dlp installation may have failed"
 fi
 
 echo ""
 echo "========================================"
-echo "Step 4/4: Checking ffmpeg"
+echo "Step 4/5: Installing Deno (for YouTube challenges)"
+echo "========================================"
+echo ""
+
+if command -v deno &> /dev/null; then
+    DENO_VERSION=$(deno --version | head -n 1)
+    echo "[OK] Deno already installed: $DENO_VERSION"
+else
+    echo "Installing Deno..."
+    if command -v brew &> /dev/null; then
+        brew install deno
+    else
+        curl -fsSL https://deno.land/install.sh | sh
+        echo "Please add Deno to your PATH manually if not detected."
+    fi
+    
+    if command -v deno &> /dev/null || [ -f "$HOME/.deno/bin/deno" ]; then
+        echo "[OK] Deno installed successfully"
+    else
+        echo "[WARNING] Deno installation may have failed"
+    fi
+fi
+
+echo ""
+echo "========================================"
+echo "Step 5/5: Checking ffmpeg"
 echo "========================================"
 echo ""
 
