@@ -50,6 +50,12 @@ const i18n = (function () {
             autoImport: 'Auto-import to Premiere',
             createBin: 'Create project folder',
             save: 'Save',
+            advancedTools: 'Advanced Tools',
+            advancedToolsDesc: 'Optional custom paths. Leave empty for auto-detection.',
+            ytdlpPath: 'yt-dlp path',
+            ffmpegPath: 'ffmpeg path',
+            denoPath: 'deno path (optional)',
+            browsePath: 'Browse for file',
 
             // Status messages
             settingsSaved: 'Settings saved',
@@ -107,6 +113,12 @@ const i18n = (function () {
             autoImport: 'Importer automatiquement dans Premiere',
             createBin: 'Créer un dossier dans le projet',
             save: 'Enregistrer',
+            advancedTools: 'Outils avancés',
+            advancedToolsDesc: 'Chemins personnalisés optionnels. Laisser vide pour auto-détection.',
+            ytdlpPath: 'Chemin yt-dlp',
+            ffmpegPath: 'Chemin ffmpeg',
+            denoPath: 'Chemin deno (optionnel)',
+            browsePath: 'Parcourir le fichier',
 
             // Status messages
             settingsSaved: 'Paramètres enregistrés',

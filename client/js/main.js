@@ -103,6 +103,9 @@ const folderQuickBtns = document.querySelectorAll('.folder-quick-btn');
 const folderPreset1Input = document.getElementById('folderPreset1');
 const folderPreset2Input = document.getElementById('folderPreset2');
 const folderPreset3Input = document.getElementById('folderPreset3');
+const customYtdlpPathInput = document.getElementById('customYtdlpPath');
+const customFfmpegPathInput = document.getElementById('customFfmpegPath');
+const customDenoPathInput = document.getElementById('customDenoPath');
 
 // --- STATE ---
 let selectedFormat = 'both';
@@ -170,6 +173,11 @@ function loadSettings() {
         const radio = document.querySelector(`input[name="pathType"][value="${settings.pathType}"]`);
         if (radio) radio.checked = true;
     }
+
+    // Load custom tool paths
+    if (customYtdlpPathInput) customYtdlpPathInput.value = settings.customYtdlpPath || '';
+    if (customFfmpegPathInput) customFfmpegPathInput.value = settings.customFfmpegPath || '';
+    if (customDenoPathInput) customDenoPathInput.value = settings.customDenoPath || '';
 }
 
 function saveSettings() {
@@ -182,7 +190,11 @@ function saveSettings() {
         createBin: document.getElementById('createBin').checked,
         pathType: document.querySelector('input[name="pathType"]:checked').value,
         customFolderPath: folderPath.value.trim(),
-        selectedFolderSlot: selectedFolderSlot
+        selectedFolderSlot: selectedFolderSlot,
+        // Custom tool paths
+        customYtdlpPath: customYtdlpPathInput ? customYtdlpPathInput.value.trim() : '',
+        customFfmpegPath: customFfmpegPathInput ? customFfmpegPathInput.value.trim() : '',
+        customDenoPath: customDenoPathInput ? customDenoPathInput.value.trim() : ''
     };
 
     localStorage.setItem('ytDownloaderSettings', JSON.stringify(settings));
@@ -244,6 +256,22 @@ settingsBtn.addEventListener('click', () => {
 
 closeSettingsBtn.addEventListener('click', () => {
     settingsPanel.classList.remove('active');
+});
+
+// Browse path buttons for tool path settings
+document.querySelectorAll('.browse-path-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const targetInputId = btn.dataset.target;
+        const targetInput = document.getElementById(targetInputId);
+        if (targetInput) {
+            // Use ExtendScript to open file dialog
+            csInterface.evalScript('File.openDialog("Select executable")', (result) => {
+                if (result && result !== 'null') {
+                    targetInput.value = result;
+                }
+            });
+        }
+    });
 });
 
 saveSettingsBtn.addEventListener('click', saveSettings);
@@ -394,18 +422,22 @@ async function downloadVideo() {
         downloadAbortController = new AbortController();
 
         try {
+            const settings = JSON.parse(localStorage.getItem('ytDownloaderSettings') || '{}');
             const options = {
                 url: url,
                 format: selectedFormat,
                 destination: destinationPath,
                 signal: downloadAbortController.signal,
+                // Custom tool paths from settings
+                customYtdlpPath: settings.customYtdlpPath || null,
+                customFfmpegPath: settings.customFfmpegPath || null,
+                customDenoPath: settings.customDenoPath || null,
                 onProgress: (data) => {
                     updateProgress(data.progress, data.status);
                 },
                 onComplete: (filePath) => {
                     updateProgress(100, i18n.get('downloadComplete'));
 
-                    const settings = JSON.parse(localStorage.getItem('ytDownloaderSettings') || '{}');
                     if (settings.autoImport !== false) {
                         setTimeout(() => {
                             importToPremiere(filePath, settings.createBin !== false);

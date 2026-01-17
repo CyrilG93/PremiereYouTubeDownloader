@@ -16,7 +16,11 @@ async function downloadVideo(options) {
         onProgress,
         onComplete,
         onError,
-        signal
+        signal,
+        // Custom tool paths from settings
+        customYtdlpPath,
+        customFfmpegPath,
+        customDenoPath
     } = options;
 
     return new Promise((resolve, reject) => {
@@ -26,13 +30,36 @@ async function downloadVideo(options) {
                 fs.mkdirSync(destination, { recursive: true });
             }
 
-            // Build yt-dlp command
-            const args = buildYtDlpArgs(url, format, destination, startTime, endTime);
+            // Build yt-dlp command with custom paths
+            const args = buildYtDlpArgs(url, format, destination, startTime, endTime, customFfmpegPath);
 
-            // Determine yt-dlp executable path based on platform
-            // On macOS, Adobe CEP doesn't have access to Homebrew PATH
-            let ytDlpPath = 'yt-dlp';
-            if (os.platform() === 'darwin') {
+            // Determine yt-dlp executable path
+            // Priority: 1. Custom path from settings, 2. Auto-detect common paths
+            let ytDlpPath = customYtdlpPath || null;
+
+            if (!ytDlpPath && os.platform() === 'win32') {
+                // Check common Windows installation paths
+                const userHome = os.homedir();
+                const winPaths = [
+                    path.join(userHome, 'AppData', 'Local', 'Programs', 'Python', 'Python313', 'Scripts', 'yt-dlp.exe'),
+                    path.join(userHome, 'AppData', 'Local', 'Programs', 'Python', 'Python312', 'Scripts', 'yt-dlp.exe'),
+                    path.join(userHome, 'AppData', 'Local', 'Programs', 'Python', 'Python311', 'Scripts', 'yt-dlp.exe'),
+                    path.join(userHome, 'AppData', 'Local', 'Programs', 'Python', 'Python310', 'Scripts', 'yt-dlp.exe'),
+                    path.join(userHome, 'AppData', 'Roaming', 'Python', 'Python313', 'Scripts', 'yt-dlp.exe'),
+                    path.join(userHome, 'AppData', 'Roaming', 'Python', 'Python312', 'Scripts', 'yt-dlp.exe'),
+                    path.join(userHome, 'AppData', 'Roaming', 'Python', 'Python311', 'Scripts', 'yt-dlp.exe'),
+                    'C:\\Python313\\Scripts\\yt-dlp.exe',
+                    'C:\\Python312\\Scripts\\yt-dlp.exe',
+                    'C:\\Python311\\Scripts\\yt-dlp.exe',
+                ];
+                for (const p of winPaths) {
+                    if (fs.existsSync(p)) {
+                        ytDlpPath = p;
+                        console.log('Found yt-dlp at:', ytDlpPath);
+                        break;
+                    }
+                }
+            } else if (!ytDlpPath && os.platform() === 'darwin') {
                 // Check common macOS installation paths
                 const macPaths = [
                     '/opt/homebrew/bin/yt-dlp',  // Apple Silicon Homebrew
@@ -47,14 +74,41 @@ async function downloadVideo(options) {
                 }
             }
 
+            // Fallback to system PATH if no explicit path found
+            if (!ytDlpPath) {
+                ytDlpPath = 'yt-dlp';
+                console.log('Using yt-dlp from system PATH (fallback)');
+            }
+
             console.log('Executing yt-dlp with args:', args);
             console.log('Using yt-dlp path:', ytDlpPath);
+
+            // Build environment with full system PATH for yt-dlp to find deno, ffmpeg, etc.
+            const customEnv = { ...process.env };
+            if (os.platform() === 'win32') {
+                // On Windows, CEP may have a limited PATH. Add common tool locations.
+                const userHome = os.homedir();
+                const additionalPaths = [
+                    // Add custom deno path directory if specified
+                    customDenoPath ? path.dirname(customDenoPath) : null,
+                    path.join(userHome, '.deno', 'bin'),
+                    path.join(userHome, 'AppData', 'Local', 'Microsoft', 'WindowsApps'),
+                    path.join(userHome, 'multi-downloader-nx'),
+                    'C:\\Program Files\\ffmpeg\\bin',
+                    'C:\\ffmpeg\\bin',
+                ].filter(p => p && fs.existsSync(p));
+                if (additionalPaths.length > 0) {
+                    customEnv.PATH = additionalPaths.join(';') + ';' + (customEnv.PATH || '');
+                    console.log('Extended PATH with:', additionalPaths);
+                }
+            }
 
             // Spawn yt-dlp process
             const ytDlp = spawn(ytDlpPath, args, {
                 cwd: destination,
                 windowsHide: true,
-                shell: false
+                shell: false,
+                env: customEnv
             });
 
             // Handle cancellation
@@ -213,13 +267,30 @@ async function downloadVideo(options) {
 /**
  * Build yt-dlp command arguments
  */
-function buildYtDlpArgs(url, format, destination, startTime, endTime) {
+function buildYtDlpArgs(url, format, destination, startTime, endTime, customFfmpegPath) {
     const args = [url];
 
     // Determine ffmpeg path for yt-dlp post-processing
-    // On macOS, Adobe CEP doesn't have access to Homebrew PATH
-    let ffmpegPath = 'ffmpeg';
-    if (os.platform() === 'darwin') {
+    // Priority: 1. Custom path from settings, 2. Auto-detect common paths
+    let ffmpegPath = customFfmpegPath || null;
+
+    if (!ffmpegPath && os.platform() === 'win32') {
+        // Check common Windows installation paths
+        const userHome = os.homedir();
+        const winPaths = [
+            path.join(userHome, 'multi-downloader-nx', 'ffmpeg.exe'),
+            'C:\\ffmpeg\\bin\\ffmpeg.exe',
+            'C:\\Program Files\\ffmpeg\\bin\\ffmpeg.exe',
+            path.join(userHome, 'AppData', 'Local', 'Programs', 'ffmpeg', 'bin', 'ffmpeg.exe'),
+        ];
+        for (const p of winPaths) {
+            if (fs.existsSync(p)) {
+                ffmpegPath = p;
+                console.log('Found ffmpeg at:', ffmpegPath);
+                break;
+            }
+        }
+    } else if (!ffmpegPath && os.platform() === 'darwin') {
         const macPaths = [
             '/opt/homebrew/bin/ffmpeg',  // Apple Silicon Homebrew
             '/usr/local/bin/ffmpeg',      // Intel Homebrew
@@ -232,6 +303,12 @@ function buildYtDlpArgs(url, format, destination, startTime, endTime) {
             }
         }
     }
+
+    // Fallback to system PATH
+    if (!ffmpegPath) {
+        ffmpegPath = 'ffmpeg';
+    }
+
     // Tell yt-dlp where to find ffmpeg
     args.push('--ffmpeg-location', path.dirname(ffmpegPath));
 
@@ -274,6 +351,10 @@ function buildYtDlpArgs(url, format, destination, startTime, endTime) {
 
     // No playlist
     args.push('--no-playlist');
+
+    // Enable remote EJS scripts for YouTube n-challenge solving
+    // This downloads solver scripts from GitHub automatically
+    args.push('--remote-components', 'ejs:github');
 
     // Embed metadata
     args.push('--embed-metadata');

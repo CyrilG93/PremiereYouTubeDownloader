@@ -1051,3 +1051,51 @@ input[type="text"]:not(:placeholder-shown)~.clear-btn {
     background: var(--accent-gradient);
     color: var(--text-primary);
 }
+
+/* Settings Advanced Tools Section */
+.settings-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 24px 0;
+}
+
+.settings-subtitle {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.settings-description {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    margin-bottom: 16px;
+    line-height: 1.4;
+}
+
+.path-input-wrapper {
+    display: flex;
+    gap: 8px;
+}
+
+.path-input-wrapper input[type="text"] {
+    flex: 1;
+}
+
+.browse-path-btn {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 10px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: var(--transition);
+    font-size: 16px;
+}
+
+.browse-path-btn:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--text-tertiary);
+}

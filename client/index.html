@@ -242,6 +242,37 @@
                         <span data-i18n="createBin">Create project folder</span>
                     </label>
                 </div>
+
+                <div class="settings-divider"></div>
+                <h3 class="settings-subtitle" data-i18n="advancedTools">Advanced Tools</h3>
+                <p class="settings-description" data-i18n="advancedToolsDesc">Optional custom paths. Leave empty for
+                    auto-detection.</p>
+
+                <div class="setting-item">
+                    <label for="customYtdlpPath" data-i18n="ytdlpPath">yt-dlp path</label>
+                    <div class="path-input-wrapper">
+                        <input type="text" id="customYtdlpPath" placeholder="Auto-detect" />
+                        <button class="browse-path-btn" data-target="customYtdlpPath"
+                            data-i18n-title="browsePath">📂</button>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <label for="customFfmpegPath" data-i18n="ffmpegPath">ffmpeg path</label>
+                    <div class="path-input-wrapper">
+                        <input type="text" id="customFfmpegPath" placeholder="Auto-detect" />
+                        <button class="browse-path-btn" data-target="customFfmpegPath"
+                            data-i18n-title="browsePath">📂</button>
+                    </div>
+                </div>
+                <div class="setting-item">
+                    <label for="customDenoPath" data-i18n="denoPath">deno path (optional)</label>
+                    <div class="path-input-wrapper">
+                        <input type="text" id="customDenoPath" placeholder="Auto-detect" />
+                        <button class="browse-path-btn" data-target="customDenoPath"
+                            data-i18n-title="browsePath">📂</button>
+                    </div>
+                </div>
+
                 <button class="save-settings-btn" id="saveSettingsBtn" data-i18n="save">Save</button>
             </div>
         </div>
