@@ -3,7 +3,8 @@
 #target premierepro
 
 // Get current project path
-function getProjectPath() {
+// Get current project path
+function YouTube_getProjectPath() {
     if (app.project.path) {
         return app.project.path;
     }
@@ -11,7 +12,8 @@ function getProjectPath() {
 }
 
 // Select folder dialog
-function selectFolder() {
+// Select folder dialog
+function YouTube_selectFolder() {
     var folder = Folder.selectDialog("Sélectionner le dossier de destination");
     if (folder) {
         return folder.fsName;
@@ -20,7 +22,8 @@ function selectFolder() {
 }
 
 // Find or create bin (supports nested paths like "MEDIAS/Test")
-function findOrCreateBin(binPath) {
+// Find or create bin (supports nested paths like "MEDIAS/Test")
+function YouTube_findOrCreateBin(binPath) {
     var project = app.project;
     var currentParent = project.rootItem;
 
@@ -64,7 +67,8 @@ function findOrCreateBin(binPath) {
 }
 
 // Import media file into Premiere Pro
-function importMedia(filePath, binName, createBin) {
+// Import media file into Premiere Pro
+function YouTube_importMedia(filePath, binName, createBin) {
     try {
         var project = app.project;
 
@@ -82,7 +86,7 @@ function importMedia(filePath, binName, createBin) {
 
         // Create or find bin if requested
         if (createBin && binName) {
-            targetBin = findOrCreateBin(binName);
+            targetBin = YouTube_findOrCreateBin(binName);
         }
 
         // Import the file
@@ -141,7 +145,8 @@ function startDownloadServer() {
 }
 
 // Utility: Get project info
-function getProjectInfo() {
+// Utility: Get project info
+function YouTube_getProjectInfo() {
     try {
         var project = app.project;
 
@@ -164,7 +169,8 @@ function getProjectInfo() {
 }
 
 // Utility: Create folder structure
-function createFolderStructure(basePath, folderName) {
+// Utility: Create folder structure
+function YouTube_createFolderStructure(basePath, folderName) {
     try {
         var folder = new Folder(basePath + "/" + folderName);
 

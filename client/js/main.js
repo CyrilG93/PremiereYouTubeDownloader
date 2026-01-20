@@ -242,7 +242,7 @@ enableTimeRange.addEventListener('change', () => {
 });
 
 browseBtn.addEventListener('click', () => {
-    csInterface.evalScript('selectFolder()', (result) => {
+    csInterface.evalScript('YouTube_selectFolder()', (result) => {
         if (result && result !== 'null') {
             folderPath.value = result;
             document.querySelector('input[name="pathType"][value="absolute"]').checked = true;
@@ -344,7 +344,7 @@ function parseTime(timeStr) {
 }
 
 function getProjectPath(callback) {
-    csInterface.evalScript('getProjectPath()', (result) => {
+    csInterface.evalScript('YouTube_getProjectPath()', (result) => {
         callback(result);
     });
 }
@@ -517,7 +517,7 @@ function importToPremiere(filePath, createBin) {
     const escapedPath = filePath.replace(/\\/g, '\\\\');
     console.log(`Escaped path: ${escapedPath}`);
 
-    const scriptCommand = `importMedia("${escapedPath}", "${binName}", ${createBin})`;
+    const scriptCommand = `YouTube_importMedia("${escapedPath}", "${binName}", ${createBin})`;
     console.log(`ExtendScript command: ${scriptCommand}`);
 
     csInterface.evalScript(scriptCommand, (result) => {
