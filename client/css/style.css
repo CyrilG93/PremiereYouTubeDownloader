@@ -247,6 +247,53 @@ input[type="text"]:not(:placeholder-shown)~.clear-btn {
     box-shadow: 0 4px 12px rgba(255, 0, 0, 0.3);
 }
 
+/* Codec Section */
+.codec-section {
+    margin-bottom: 24px;
+    transition: var(--transition);
+}
+
+.codec-section.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+.codec-quick-select {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+}
+
+.codec-quick-btn {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 10px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.codec-quick-btn:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--text-tertiary);
+    transform: translateY(-1px);
+}
+
+.codec-quick-btn.active {
+    background: var(--accent-gradient);
+    border-color: var(--accent-primary);
+    color: var(--text-primary);
+    box-shadow: 0 2px 8px rgba(255, 0, 0, 0.3);
+}
+
 /* Time Section */
 .section-header {
     margin-bottom: 12px;

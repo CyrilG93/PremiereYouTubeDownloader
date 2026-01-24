@@ -99,6 +99,9 @@ Run in Terminal:
 ## ✨ Features
 
 - ✅ Download YouTube videos directly into Premiere Pro
+- ✅ **Codec Selection**: Choose between H.264 (MP4) or ProRes 422 HQ (MOV)
+- ✅ **YouTube Shorts Support**: Download Shorts with their original URLs
+- ✅ **Unicode Filenames**: Support for Japanese, Chinese, Korean, and other non-Latin characters
 - ✅ **Folder Quick-Select**: 4 preset destination buttons for fast switching
 - ✅ Automatic H.264 video codec (Premiere Pro compatible)
 - ✅ Automatic AAC audio conversion (no more silent videos!)
@@ -189,8 +192,14 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Recent Updates
 
-### Version 2.3 (Latest)
-- ✅ **Custom tool paths in Settings**: Configure yt-dlp, ffmpeg, and deno paths manually
+### Version 2.4.0 (Latest)
+- ✅ **Codec Selection**: Choose between H.264 (MP4) or ProRes 422 HQ (MOV)
+- ✅ **YouTube Shorts Support**: Download videos from youtube.com/shorts/ URLs
+- ✅ **Unicode Filename Support**: Japanese, Chinese, Korean, and other non-Latin characters preserved in filenames
+- ✅ Codec section auto-disables when Audio Only is selected
+
+### Version 2.3
+- ✅ Custom tool paths in Settings: Configure yt-dlp, ffmpeg, and deno paths manually
 - ✅ Auto-detection of tools in common installation locations
 - ✅ Installer now installs Deno automatically
 - ✅ Installer now installs yt-dlp with EJS support for YouTube compatibility

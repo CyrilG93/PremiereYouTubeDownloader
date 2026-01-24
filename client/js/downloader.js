@@ -10,6 +10,7 @@ async function downloadVideo(options) {
     const {
         url,
         format = 'both',
+        codec = 'h264',
         destination,
         startTime,
         endTime,
@@ -214,9 +215,10 @@ async function downloadVideo(options) {
                 }
 
                 if (code === 0 || (code === null && signal && signal.aborted)) {
-                    // Success
-                    if (!downloadedFile) {
-                        console.log('No file captured from yt-dlp output, searching directory...');
+                    // Success - verify captured file exists, fallback to directory scan
+                    // This handles Unicode filenames that may not parse correctly from stdout
+                    if (!downloadedFile || !fs.existsSync(downloadedFile)) {
+                        console.log('File not found or not captured, scanning directory for latest file...');
                         downloadedFile = findLatestFile(destination);
                     }
 
@@ -224,23 +226,34 @@ async function downloadVideo(options) {
                     console.log(`Final file to be used: ${downloadedFile}`);
                     console.log(`File exists: ${downloadedFile && fs.existsSync(downloadedFile)}`);
 
-                    // Apply time trimming if needed
                     if (startTime !== undefined && endTime !== undefined && downloadedFile) {
                         console.log(`Applying time trimming: ${startTime}s to ${endTime}s`);
                         trimVideo(downloadedFile, startTime, endTime, (trimmedFile) => {
-                            if (trimmedFile) {
-                                console.log(`Trimmed file created: ${trimmedFile}`);
-                                if (onComplete) onComplete(trimmedFile);
-                                resolve(trimmedFile);
+                            const fileToProcess = trimmedFile || downloadedFile;
+                            // Apply ProRes conversion if needed
+                            if (codec === 'prores' && format !== 'audio') {
+                                convertToProRes(fileToProcess, customFfmpegPath, onProgress, (proresFile) => {
+                                    const finalFile = proresFile || fileToProcess;
+                                    if (onComplete) onComplete(finalFile);
+                                    resolve(finalFile);
+                                });
                             } else {
-                                console.log(`Trimming failed, using original file: ${downloadedFile}`);
-                                if (onComplete) onComplete(downloadedFile);
-                                resolve(downloadedFile);
+                                if (onComplete) onComplete(fileToProcess);
+                                resolve(fileToProcess);
                             }
                         });
                     } else {
-                        if (onComplete) onComplete(downloadedFile);
-                        resolve(downloadedFile);
+                        // Apply ProRes conversion if needed (no trimming)
+                        if (codec === 'prores' && format !== 'audio' && downloadedFile) {
+                            convertToProRes(downloadedFile, customFfmpegPath, onProgress, (proresFile) => {
+                                const finalFile = proresFile || downloadedFile;
+                                if (onComplete) onComplete(finalFile);
+                                resolve(finalFile);
+                            });
+                        } else {
+                            if (onComplete) onComplete(downloadedFile);
+                            resolve(downloadedFile);
+                        }
                     }
                 } else {
                     const error = new Error(`yt-dlp exited with code ${code}. Details: ${errorBuffer}`);
@@ -339,11 +352,8 @@ function buildYtDlpArgs(url, format, destination, startTime, endTime, customFfmp
     // Output template
     args.push('-o', '%(title)s.%(ext)s');
 
-    // Restrict filenames to Windows-safe characters
+    // Restrict filenames to Windows-safe characters only (allows Unicode)
     args.push('--windows-filenames');
-
-    // Replace problematic characters
-    args.push('--restrict-filenames');
 
     // Progress
     args.push('--newline');
@@ -455,6 +465,123 @@ function trimVideo(inputFile, startTime, endTime, callback) {
 }
 
 /**
+ * Convert video to ProRes 422 using ffmpeg
+ */
+function convertToProRes(inputFile, customFfmpegPath, onProgress, callback) {
+    try {
+        const ext = path.extname(inputFile);
+        const basename = path.basename(inputFile, ext);
+        const dirname = path.dirname(inputFile);
+        const outputFile = path.join(dirname, `${basename}.mov`);
+
+        console.log(`Converting to ProRes 422: ${inputFile} -> ${outputFile}`);
+
+        if (onProgress) {
+            onProgress({
+                progress: 95,
+                status: 'Conversion en ProRes 422 HQ...'
+            });
+        }
+
+        // Determine ffmpeg executable path
+        let ffmpegPath = customFfmpegPath || null;
+
+        if (!ffmpegPath && os.platform() === 'win32') {
+            const userHome = os.homedir();
+            const winPaths = [
+                path.join(userHome, 'multi-downloader-nx', 'ffmpeg.exe'),
+                'C:\\ffmpeg\\bin\\ffmpeg.exe',
+                'C:\\Program Files\\ffmpeg\\bin\\ffmpeg.exe',
+                path.join(userHome, 'AppData', 'Local', 'Programs', 'ffmpeg', 'bin', 'ffmpeg.exe'),
+            ];
+            for (const p of winPaths) {
+                if (fs.existsSync(p)) {
+                    ffmpegPath = p;
+                    break;
+                }
+            }
+        } else if (!ffmpegPath && os.platform() === 'darwin') {
+            const macPaths = [
+                '/opt/homebrew/bin/ffmpeg',
+                '/usr/local/bin/ffmpeg',
+                '/usr/bin/ffmpeg'
+            ];
+            for (const p of macPaths) {
+                if (fs.existsSync(p)) {
+                    ffmpegPath = p;
+                    break;
+                }
+            }
+        }
+
+        if (!ffmpegPath) {
+            ffmpegPath = 'ffmpeg';
+        }
+
+        // ProRes 422 HQ encoding arguments
+        // -c:v prores_ks: Use Apple ProRes Kostya encoder
+        // -profile:v 3: ProRes 422 HQ profile (0=Proxy, 1=LT, 2=422, 3=HQ)
+        // -c:a pcm_s16le: Uncompressed 16-bit PCM audio (native for ProRes workflows)
+        const args = [
+            '-i', inputFile,
+            '-c:v', 'prores_ks',
+            '-profile:v', '3',
+            '-vendor', 'apl0',
+            '-pix_fmt', 'yuv422p10le',
+            '-c:a', 'pcm_s16le',
+            '-y',
+            outputFile
+        ];
+
+        console.log('Executing ffmpeg for ProRes conversion:', args.join(' '));
+
+        const ffmpeg = spawn(ffmpegPath, args, {
+            shell: false,
+            windowsHide: true
+        });
+
+        ffmpeg.stderr.on('data', (data) => {
+            const output = data.toString();
+            console.log('ffmpeg ProRes:', output);
+            // Parse progress from ffmpeg stderr
+            const timeMatch = output.match(/time=(\d{2}):(\d{2}):(\d{2})/);
+            if (timeMatch && onProgress) {
+                onProgress({
+                    progress: 96,
+                    status: 'Conversion en ProRes 422 HQ...'
+                });
+            }
+        });
+
+        ffmpeg.on('close', (code) => {
+            if (code === 0 && fs.existsSync(outputFile)) {
+                console.log(`ProRes conversion successful: ${outputFile}`);
+                // Delete original MP4 file
+                try {
+                    fs.unlinkSync(inputFile);
+                    console.log(`Deleted original file: ${inputFile}`);
+                } catch (e) {
+                    console.error('Error deleting original file:', e);
+                }
+                callback(outputFile);
+            } else {
+                console.error(`ProRes conversion failed with code ${code}`);
+                callback(null);
+            }
+        });
+
+        ffmpeg.on('error', (err) => {
+            console.error('ffmpeg ProRes error:', err);
+            callback(null);
+        });
+
+    } catch (error) {
+        console.error('ProRes conversion error:', error);
+        callback(null);
+    }
+}
+
+/**
  * Find the latest file in a directory
  */
 function findLatestFile(directory) {
@@ -464,7 +591,7 @@ function findLatestFile(directory) {
         const files = fs.readdirSync(directory)
             .filter(file => {
                 const ext = path.extname(file).toLowerCase();
-                return ['.mp4', '.mkv', '.webm', '.mp3', '.m4a', '.wav'].includes(ext);
+                return ['.mp4', '.mov', '.mkv', '.webm', '.mp3', '.m4a', '.wav'].includes(ext);
             })
             .map(file => ({
                 name: file,
@@ -473,11 +600,14 @@ function findLatestFile(directory) {
                 time: fs.statSync(path.join(directory, file)).mtime.getTime()
             }))
             .sort((a, b) => {
-                // Prioritize MP4 files over other formats
-                if (a.ext === '.mp4' && b.ext !== '.mp4') return -1;
-                if (a.ext !== '.mp4' && b.ext === '.mp4') return 1;
-                // Then sort by time (newest first)
-                return b.time - a.time;
+                // Sort by time first (newest first)
+                const timeDiff = b.time - a.time;
+                if (timeDiff !== 0) return timeDiff;
+                // Use extension as tiebreaker: prioritize MOV and MP4
+                const priority = { '.mov': 0, '.mp4': 1 };
+                const aPriority = priority[a.ext] ?? 2;
+                const bPriority = priority[b.ext] ?? 2;
+                return aPriority - bPriority;
             });
 
         console.log(`Found ${files.length} media files:`);

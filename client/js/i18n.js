@@ -40,6 +40,7 @@ const i18n = (function () {
             cancel: 'Cancel',
             showLogs: 'Show logs',
             hideLogs: 'Hide logs',
+            codecLabel: 'Codec',
 
             // Settings panel
             settings: 'Settings',
@@ -77,7 +78,8 @@ const i18n = (function () {
             merging: 'Merging formats...',
             finalizing: 'Finalizing...',
             importing: 'Importing to Premiere...',
-            cancelling: 'Cancelling...'
+            cancelling: 'Cancelling...',
+            convertingProRes: 'Converting to ProRes 422 HQ...'
         },
         fr: {
             // Main UI
@@ -103,6 +105,7 @@ const i18n = (function () {
             cancel: 'Annuler',
             showLogs: 'Afficher les logs',
             hideLogs: 'Masquer les logs',
+            codecLabel: 'Codec',
 
             // Settings panel
             settings: 'Paramètres',
@@ -140,7 +143,8 @@ const i18n = (function () {
             merging: 'Fusion des formats...',
             finalizing: 'Finalisation...',
             importing: 'Import dans Premiere...',
-            cancelling: 'Annulation...'
+            cancelling: 'Annulation...',
+            convertingProRes: 'Conversion en ProRes 422 HQ...'
         }
     };
 

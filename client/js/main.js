@@ -106,10 +106,13 @@ const folderPreset3Input = document.getElementById('folderPreset3');
 const customYtdlpPathInput = document.getElementById('customYtdlpPath');
 const customFfmpegPathInput = document.getElementById('customFfmpegPath');
 const customDenoPathInput = document.getElementById('customDenoPath');
+const codecQuickBtns = document.querySelectorAll('.codec-quick-btn');
+const codecSection = document.getElementById('codecSection');
 
 // --- STATE ---
 let selectedFormat = 'both';
 let selectedFolderSlot = '1';
+let selectedCodec = 'h264';
 let isDownloading = false;
 let downloadAbortController = null;
 
@@ -228,6 +231,19 @@ formatBtns.forEach(btn => {
         formatBtns.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         selectedFormat = btn.dataset.format;
+        // Disable codec section for audio-only downloads
+        if (codecSection) {
+            codecSection.classList.toggle('disabled', selectedFormat === 'audio');
+        }
+    });
+});
+
+// Codec quick select buttons
+codecQuickBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        codecQuickBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedCodec = btn.dataset.codec;
     });
 });
 
@@ -328,7 +344,8 @@ function updateProgress(percent, text) {
 }
 
 function isValidYouTubeUrl(url) {
-    const pattern = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)[\w-]+/;
+    // Supports: youtube.com/watch, youtu.be, youtube.com/shorts
+    const pattern = /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|shorts\/)|youtu\.be\/)[\w-]+/;
     return pattern.test(url);
 }
 
@@ -426,6 +443,7 @@ async function downloadVideo() {
             const options = {
                 url: url,
                 format: selectedFormat,
+                codec: selectedFormat === 'audio' ? 'h264' : selectedCodec,
                 destination: destinationPath,
                 signal: downloadAbortController.signal,
                 // Custom tool paths from settings
