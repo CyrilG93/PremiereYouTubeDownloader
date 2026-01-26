@@ -192,7 +192,12 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Recent Updates
 
-### Version 2.4.0 (Latest)
+### Version 2.4.1 (Latest)
+- ✅ **Fixed HTTP Error 403**: Updated yt-dlp dependencies to resolve YouTube access issues
+- ✅ **macOS Environment Fix**: Fixed an issue where Deno was not found by the extension on macOS
+- ✅ **Dependency Update**: Enforced latest yt-dlp version with EJS support
+
+### Version 2.4.0
 - ✅ **Codec Selection**: Choose between H.264 (MP4) or ProRes 422 HQ (MOV)
 - ✅ **YouTube Shorts Support**: Download videos from youtube.com/shorts/ URLs
 - ✅ **Unicode Filename Support**: Japanese, Chinese, Korean, and other non-Latin characters preserved in filenames

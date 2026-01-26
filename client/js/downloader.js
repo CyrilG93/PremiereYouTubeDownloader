@@ -102,6 +102,24 @@ async function downloadVideo(options) {
                     customEnv.PATH = additionalPaths.join(';') + ';' + (customEnv.PATH || '');
                     console.log('Extended PATH with:', additionalPaths);
                 }
+            } else if (os.platform() === 'darwin' || os.platform() === 'linux') {
+                // On macOS/Linux, also ensure common paths are present
+                const userHome = os.homedir();
+                const additionalPaths = [
+                    '/opt/homebrew/bin',
+                    '/usr/local/bin',
+                    path.join(userHome, '.deno', 'bin'),
+                    path.join(userHome, '.nvm', 'versions', 'node'), // conceptual, might need glob
+                    '/usr/bin',
+                    '/bin',
+                    '/usr/sbin',
+                    '/sbin'
+                ].filter(p => p && fs.existsSync(p));
+
+                if (additionalPaths.length > 0) {
+                    customEnv.PATH = additionalPaths.join(':') + ':' + (customEnv.PATH || '');
+                    console.log('Extended PATH with:', additionalPaths);
+                }
             }
 
             // Spawn yt-dlp process
