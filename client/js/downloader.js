@@ -42,13 +42,16 @@ async function downloadVideo(options) {
                 // Check common Windows installation paths
                 const userHome = os.homedir();
                 const winPaths = [
+                    path.join(userHome, 'AppData', 'Local', 'Programs', 'Python', 'Python314', 'Scripts', 'yt-dlp.exe'),
                     path.join(userHome, 'AppData', 'Local', 'Programs', 'Python', 'Python313', 'Scripts', 'yt-dlp.exe'),
                     path.join(userHome, 'AppData', 'Local', 'Programs', 'Python', 'Python312', 'Scripts', 'yt-dlp.exe'),
                     path.join(userHome, 'AppData', 'Local', 'Programs', 'Python', 'Python311', 'Scripts', 'yt-dlp.exe'),
                     path.join(userHome, 'AppData', 'Local', 'Programs', 'Python', 'Python310', 'Scripts', 'yt-dlp.exe'),
+                    path.join(userHome, 'AppData', 'Roaming', 'Python', 'Python314', 'Scripts', 'yt-dlp.exe'),
                     path.join(userHome, 'AppData', 'Roaming', 'Python', 'Python313', 'Scripts', 'yt-dlp.exe'),
                     path.join(userHome, 'AppData', 'Roaming', 'Python', 'Python312', 'Scripts', 'yt-dlp.exe'),
                     path.join(userHome, 'AppData', 'Roaming', 'Python', 'Python311', 'Scripts', 'yt-dlp.exe'),
+                    'C:\\Python314\\Scripts\\yt-dlp.exe',
                     'C:\\Python313\\Scripts\\yt-dlp.exe',
                     'C:\\Python312\\Scripts\\yt-dlp.exe',
                     'C:\\Python311\\Scripts\\yt-dlp.exe',
