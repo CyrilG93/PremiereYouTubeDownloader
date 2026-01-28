@@ -192,7 +192,11 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Recent Updates
 
-### Version 2.4.1 (Latest)
+### Version 2.4.2 (Latest)
+- **Windows Fix**: Fixed `yt-dlp` detection for Python 3.14 installations.
+- **Improved**: Better path handling for dependency checking.
+
+### Version 2.4.1
 - ✅ **Fixed HTTP Error 403**: Updated yt-dlp dependencies to resolve YouTube access issues
 - ✅ **macOS Environment Fix**: Fixed an issue where Deno was not found by the extension on macOS
 - ✅ **Dependency Update**: Enforced latest yt-dlp version with EJS support
