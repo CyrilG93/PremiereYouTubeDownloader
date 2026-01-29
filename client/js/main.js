@@ -69,7 +69,7 @@ console.error = function (...args) {
     addLog(args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' '), 'error');
 };
 
-console.log("YouTube Downloader v2.5.1 - Serverless Mode Initialized");
+console.log("YouTube Downloader v2.5.2 - Serverless Mode Initialized");
 
 if (toggleLogsBtn) {
     toggleLogsBtn.addEventListener('click', () => {
@@ -182,6 +182,9 @@ function loadSettings() {
     if (customFfmpegPathInput) customFfmpegPathInput.value = settings.customFfmpegPath || '';
     if (customDenoPathInput) customDenoPathInput.value = settings.customDenoPath || '';
     if (folderDepthInput) folderDepthInput.value = settings.folderDepth !== undefined ? settings.folderDepth : 0;
+    if (settings.cookieBrowser && document.getElementById('cookieBrowser')) {
+        document.getElementById('cookieBrowser').value = settings.cookieBrowser;
+    }
 }
 
 function saveSettings() {
@@ -199,7 +202,8 @@ function saveSettings() {
         customYtdlpPath: customYtdlpPathInput ? customYtdlpPathInput.value.trim() : '',
         customFfmpegPath: customFfmpegPathInput ? customFfmpegPathInput.value.trim() : '',
         customDenoPath: customDenoPathInput ? customDenoPathInput.value.trim() : '',
-        folderDepth: folderDepthInput ? parseInt(folderDepthInput.value, 10) : 0
+        folderDepth: folderDepthInput ? parseInt(folderDepthInput.value, 10) : 0,
+        cookieBrowser: document.getElementById('cookieBrowser') ? document.getElementById('cookieBrowser').value : 'firefox'
     };
 
     localStorage.setItem('ytDownloaderSettings', JSON.stringify(settings));
@@ -470,6 +474,7 @@ async function downloadVideo() {
                 customYtdlpPath: settings.customYtdlpPath || null,
                 customFfmpegPath: settings.customFfmpegPath || null,
                 customDenoPath: settings.customDenoPath || null,
+                cookieBrowser: settings.cookieBrowser || 'firefox',
                 onProgress: (data) => {
                     // Translate status message if it's a key, otherwise show as is
                     const statusText = i18n.get(data.status);
