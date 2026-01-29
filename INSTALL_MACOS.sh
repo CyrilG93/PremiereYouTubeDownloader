@@ -201,9 +201,14 @@ echo "Enabling CEP Debug Mode"
 echo "========================================"
 echo ""
 
+defaults write com.adobe.CSXS.10 PlayerDebugMode 1
 defaults write com.adobe.CSXS.11 PlayerDebugMode 1
 defaults write com.adobe.CSXS.12 PlayerDebugMode 1
-echo "[OK] CEP debug mode enabled"
+defaults write com.adobe.CSXS.13 PlayerDebugMode 1
+defaults write com.adobe.CSXS.14 PlayerDebugMode 1
+defaults write com.adobe.CSXS.15 PlayerDebugMode 1
+defaults write com.adobe.CSXS.16 PlayerDebugMode 1
+echo "[OK] CEP debug mode enabled for CSXS 10-16"
 
 echo ""
 echo "========================================"
