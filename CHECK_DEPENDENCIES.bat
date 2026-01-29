@@ -10,10 +10,11 @@ echo.
 set "ALL_OK=1"
 
 :: Check Node.js
-echo [1/4] Checking Node.js...
+echo [1/5] Checking Node.js...
 node --version >nul 2>&1
 if %errorLevel% equ 0 (
     for /f "tokens=*" %%i in ('node --version') do echo   [OK] Node.js: %%i
+    for /f "tokens=*" %%i in ('where node') do echo        Path: %%i
 ) else (
     echo   [MISSING] Node.js not found
     echo   Download from: https://nodejs.org/
@@ -22,10 +23,11 @@ if %errorLevel% equ 0 (
 echo.
 
 :: Check Python
-echo [2/4] Checking Python...
+echo [2/5] Checking Python...
 python --version >nul 2>&1
 if %errorLevel% equ 0 (
     for /f "tokens=*" %%i in ('python --version') do echo   [OK] Python: %%i
+    for /f "tokens=*" %%i in ('where python') do echo        Path: %%i
 ) else (
     echo   [MISSING] Python not found
     echo   Download from: https://www.python.org/downloads/
@@ -34,10 +36,11 @@ if %errorLevel% equ 0 (
 echo.
 
 :: Check yt-dlp
-echo [3/4] Checking yt-dlp...
+echo [3/5] Checking yt-dlp...
 yt-dlp --version >nul 2>&1
 if %errorLevel% equ 0 (
     for /f "tokens=*" %%i in ('yt-dlp --version') do echo   [OK] yt-dlp: %%i
+    for /f "tokens=*" %%i in ('where yt-dlp') do echo        Path: %%i
 ) else (
     echo   [MISSING] yt-dlp not found
     echo   Install with: pip install yt-dlp
@@ -46,13 +49,27 @@ if %errorLevel% equ 0 (
 echo.
 
 :: Check ffmpeg
-echo [4/4] Checking ffmpeg...
+echo [4/5] Checking ffmpeg...
 ffmpeg -version >nul 2>&1
 if %errorLevel% equ 0 (
     for /f "tokens=3" %%i in ('ffmpeg -version ^| findstr "ffmpeg version"') do echo   [OK] ffmpeg: %%i
+    for /f "tokens=*" %%i in ('where ffmpeg') do echo        Path: %%i
 ) else (
     echo   [MISSING] ffmpeg not found
     echo   Download from: https://ffmpeg.org/download.html
+    set "ALL_OK=0"
+)
+echo.
+
+:: Check Deno
+echo [5/5] Checking Deno...
+deno --version >nul 2>&1
+if %errorLevel% equ 0 (
+    for /f "tokens=2" %%i in ('deno --version ^| findstr "deno"') do echo   [OK] Deno: %%i
+    for /f "tokens=*" %%i in ('where deno') do echo        Path: %%i
+) else (
+    echo   [MISSING] Deno not found
+    echo   Run: powershell -c "irm https://deno.land/install.ps1 | iex"
     set "ALL_OK=0"
 )
 echo.
