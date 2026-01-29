@@ -99,7 +99,9 @@ function YouTube_importMedia(filePath, binName, createBin) {
 
         if (importedItems === true || (importedItems && importedItems.length > 0)) {
             // Select the imported item in project panel
-            project.activeSequence = null; // Deselect sequence
+            try {
+                project.activeSequence = null; // Deselect sequence
+            } catch (ignore) { }
 
             return "success";
         } else {
