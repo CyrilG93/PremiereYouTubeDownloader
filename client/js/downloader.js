@@ -24,6 +24,19 @@ async function downloadVideo(options) {
         customDenoPath
     } = options;
 
+    // LOAD EXTERNAL CONFIGURATION (AUTO-DETECTED PATHS)
+    let autoConfig = {};
+    try {
+        const configPath = path.join(__dirname, 'config.json');
+        if (fs.existsSync(configPath)) {
+            console.log('Loading configuration from:', configPath);
+            const configFile = fs.readFileSync(configPath, 'utf8');
+            autoConfig = JSON.parse(configFile);
+        }
+    } catch (e) {
+        console.error('Error loading config.json:', e);
+    }
+
     return new Promise((resolve, reject) => {
         try {
             // Ensure destination directory exists
@@ -32,11 +45,12 @@ async function downloadVideo(options) {
             }
 
             // Build yt-dlp command with custom paths
-            const args = buildYtDlpArgs(url, format, destination, startTime, endTime, customFfmpegPath);
+            // Priority: 1. Settings (UI) 2. AutoConfig (JSON) 3. Logic detection 4. PATH
+            const effectiveFfmpegPath = customFfmpegPath || autoConfig.ffmpegPath || null;
+            const args = buildYtDlpArgs(url, format, destination, startTime, endTime, effectiveFfmpegPath);
 
             // Determine yt-dlp executable path
-            // Priority: 1. Custom path from settings, 2. Auto-detect common paths
-            let ytDlpPath = customYtdlpPath || null;
+            let ytDlpPath = customYtdlpPath || autoConfig.ytDlpPath || null;
 
             if (!ytDlpPath && os.platform() === 'win32') {
                 // Check common Windows installation paths
@@ -101,6 +115,12 @@ async function downloadVideo(options) {
                     'C:\\Program Files\\ffmpeg\\bin',
                     'C:\\ffmpeg\\bin',
                 ].filter(p => p && fs.existsSync(p));
+
+                // Add paths from AutoConfig if available
+                if (autoConfig.denoPath) additionalPaths.push(path.dirname(autoConfig.denoPath));
+                if (autoConfig.nodePath) additionalPaths.push(path.dirname(autoConfig.nodePath));
+                if (autoConfig.pythonPath) additionalPaths.push(path.dirname(autoConfig.pythonPath));
+
                 if (additionalPaths.length > 0) {
                     customEnv.PATH = additionalPaths.join(';') + ';' + (customEnv.PATH || '');
                     console.log('Extended PATH with:', additionalPaths);
@@ -505,7 +525,7 @@ function convertToProRes(inputFile, customFfmpegPath, onProgress, callback) {
         }
 
         // Determine ffmpeg executable path
-        let ffmpegPath = customFfmpegPath || null;
+        let ffmpegPath = customFfmpegPath || autoConfig.ffmpegPath || null;
 
         if (!ffmpegPath && os.platform() === 'win32') {
             const userHome = os.homedir();
