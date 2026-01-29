@@ -7,11 +7,17 @@ echo "YouTube Downloader - Auto-Configurator"
 echo "========================================"
 echo ""
 
-# Output file path relative to this script
-# Assumes structure: /path/to/CONFIGURE_MACOS.sh
-# Config goes to:    /path/to/client/js/config.json
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-CONFIG_FILE="$SCRIPT_DIR/client/js/config.json"
+# Target the installed extension location first
+EXTENSION_PATH="/Library/Application Support/Adobe/CEP/extensions/PremiereYouTubeDownloader"
+LOCAL_CONFIG_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )/client/js/config.json"
+
+if [ -d "$EXTENSION_PATH/client/js" ]; then
+    CONFIG_FILE="$EXTENSION_PATH/client/js/config.json"
+    echo "Targeting installed extension at: $EXTENSION_PATH"
+else
+    CONFIG_FILE="$LOCAL_CONFIG_PATH"
+    echo "Targeting local directory (Extension not found in system path)"
+fi
 
 echo "Scanning system for dependencies..."
 echo ""

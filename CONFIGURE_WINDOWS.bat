@@ -7,11 +7,21 @@ echo YouTube Downloader - Auto-Configurator
 echo ========================================
 echo.
 
-:: Get current directory and config file path
+:: Define paths
 set "SCRIPT_DIR=%~dp0"
-set "CONFIG_FILE=%SCRIPT_DIR%client\js\config.json"
+set "EXTENSION_PATH=%ProgramFiles%\Common Files\Adobe\CEP\extensions\PremiereYouTubeDownloader"
+set "LOCAL_CONFIG=%SCRIPT_DIR%client\js\config.json"
 
-echo Output path: %CONFIG_FILE%
+:: Check if extension is installed in system folder
+if exist "%EXTENSION_PATH%\client\js" (
+    set "CONFIG_FILE=%EXTENSION_PATH%\client\js\config.json"
+    echo Targeting installed extension at: %EXTENSION_PATH%
+) else (
+    set "CONFIG_FILE=%LOCAL_CONFIG%"
+    echo Targeting local directory (Extension not found in system path)
+)
+
+echo Output file: %CONFIG_FILE%
 echo.
 
 echo Scanning system for dependencies...
