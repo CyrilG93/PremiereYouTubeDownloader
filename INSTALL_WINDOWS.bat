@@ -205,8 +205,7 @@ if "%SKIP_COPY%"=="0" (
     echo [OK] Extension files installed successfully!
 )
 
-    echo [OK] Extension files installed successfully!
-)
+
 
 echo.
 echo ========================================
