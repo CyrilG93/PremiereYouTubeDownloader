@@ -17,15 +17,21 @@ echo "Source directory: $SOURCE_DIR"
 echo "Target directory: $EXTENSION_PATH"
 echo ""
 
-# Check for sudo if needed
-if [ ! -w "/Library/Application Support/Adobe/CEP/extensions" ]; then
+# Check for sudo and auto-elevate if needed
+if [ "$EUID" -ne 0 ]; then
     echo "This script requires administrator privileges."
-    echo "Please run with: sudo ./INSTALL_MACOS.sh"
-    echo ""
-    exit 1
+    echo "Requesting sudo access..."
+    sudo "$0" "$@"
+    exit $?
 fi
 
 echo "[OK] Running with appropriate permissions"
+
+# Ensure helper scripts have execution permissions
+chmod +x "$SOURCE_DIR/CONFIGURE_MACOS.sh" 2>/dev/null
+chmod +x "$SOURCE_DIR/CHECK_DEPENDENCIES.sh" 2>/dev/null
+chmod +x "$SOURCE_DIR/INSTALL_MACOS.sh" 2>/dev/null
+
 echo ""
 
 # Check if running from installation directory
