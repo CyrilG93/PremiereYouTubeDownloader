@@ -17,6 +17,13 @@ This extension needs the following tools installed on your computer:
 | **Deno** | JavaScript runtime for yt-dlp challenge solving |
 | **ffmpeg** | Converts video/audio to formats compatible with Premiere Pro |
 
+> [!IMPORTANT]
+> **🍪 Authentication Issue? Use Firefox!**
+> Chromium browsers (Chrome, Brave, Edge) lock their cookie files when open, preventing the download to start.
+> **We strongly recommend using Firefox** and selecting "Firefox" in the extension settings.
+> 
+> **Make sure you are logged into your YouTube account on Firefox** to avoid "Sign in required" or "403 Forbidden" errors.
+
 ---
 
 ## 🚀 Installation
@@ -126,7 +133,6 @@ Run in Terminal:
 
 ## ⚙️ Configuration & Settings
 
-Click the **Settings** (⚙️) button to customize the extension:
 
 ### 🍪 Browser for Cookies
 **Essential for avoiding errors!**
@@ -239,12 +245,7 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 - **Improved**: Safer validaton of active sequence after import.
 - **Fixed**: Removed development config file that caused path issues on Windows.
 
-> [!IMPORTANT]
-> **🍪 Authentication Issue? Use Firefox!**
-> Chromium browsers (Chrome, Brave, Edge) lock their cookie files when open, preventing the download to start.
-> **We strongly recommend using Firefox** and selecting "Firefox" in the extension settings.
-> 
-> **Make sure you are logged into your YouTube account on Firefox** to avoid "Sign in required" or "403 Forbidden" errors.
+
 
 ### Version 2.5.0 (Huge Update!) 🚀
 - **Improved**: Safer validaton of active sequence after import.
