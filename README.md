@@ -21,48 +21,64 @@ This extension needs the following tools installed on your computer:
 
 ## 🚀 Installation
 
-### Option 1: Automated Installation (Recommended)
+## 🚀 Installation & Setup
 
-The installer scripts will:
-- ✅ Check if Node.js is installed (you must install it manually if missing)
-- ✅ Check if Python is installed (you must install it manually if missing)
-- ✅ Install yt-dlp with EJS support automatically via pip
-- ✅ Install Deno automatically (for YouTube n-challenge solving)
-- ✅ Check if ffmpeg is installed (you must install it manually if missing)
-- ✅ Copy extension files to the correct Adobe folder
-- ✅ Enable CEP debug mode (required for unsigned extensions)
+### Windows - Step by Step
 
-#### Windows
+**1. Install Prerequisites** (Use default settings for all):
+   - [Download Node.js](https://nodejs.org/)
+   - [Download Python](https://www.python.org/downloads/) → **⚠️ Check "Add Python to PATH" during install**
+   - [Download ffmpeg](https://www.gyan.dev/ffmpeg/builds/) (See details below if needed)
 
-1. **First install prerequisites** (if not already installed):
-   - [Download Node.js](https://nodejs.org/) → Install with default options
-   - [Download Python](https://www.python.org/downloads/) → **⚠️ Check "Add Python to PATH"**
-   - [Download ffmpeg](https://www.gyan.dev/ffmpeg/builds/) → See "Installing ffmpeg on Windows" below
+**2. Install the Extension**:
+   - Right-click `INSTALL_WINDOWS.bat` -> Select **Run as administrator**
+   - Wait for "Installation Complete" message.
 
-2. **Run the installer**:
-   - Right-click `INSTALL_WINDOWS.bat` → **Run as administrator**
-   - Follow on-screen instructions
+**3. Configure (Recommended)**
+   - Double-click `CONFIGURE_WINDOWS.bat`
+   - This tool scans your computer for all required tools (Python, Deno, ffmpeg...) and creates a configuration file so the extension knows exactly where they are.
+   - If it says **[MISSING]** for any tool, install it and run this script again.
 
-3. **Restart Premiere Pro**
+**4. Start Premiere Pro**
+   - Go to **Window** > **Extensions** > **YouTube Downloader**
 
-#### macOS
+---
 
-1. **First install prerequisites** (if not already installed):
+### macOS - Step by Step
+
+**1. Install Prerequisites**:
+   Open Terminal and copy-paste this command to install everything at once (requires Homebrew):
    ```bash
-   # Install Homebrew (if not installed)
-   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-   
-   # Install all dependencies at once
-   brew install node python ffmpeg
+   brew install node python ffmpeg deno yt-dlp
    ```
 
-2. **Run the installer**:
+**2. Install the Extension**:
+   Open Terminal, navigate to the folder and run:
    ```bash
-   cd /path/to/PremiereYouTubeDownloader
    sudo ./INSTALL_MACOS.sh
    ```
 
-3. **Restart Premiere Pro**
+**3. Configure (Recommended)**:
+   Run the configuration script to auto-detect paths:
+   ```bash
+   ./CONFIGURE_MACOS.sh
+   ```
+
+**4. Start Premiere Pro**
+   - Go to **Window** > **Extensions** > **YouTube Downloader**
+
+---
+
+## 🛠️ Tools & Diagnostics
+
+The folder contains several tools to help you if something goes wrong.
+
+| File | What it does | When to use it? |
+|------|--------------|-----------------|
+| `INSTALL_WINDOWS.bat` | Installs the extension and tries to install Deno/yt-dlp automatically. | **First step** to install or update the extension. |
+| `CONFIGURE_WINDOWS.bat` | Scans your PC for tools and creates a `config.json` file. | **Run this if download fails.** It ensures the extension knows where your tools are. |
+| `CHECK_DEPENDENCIES.bat` | Just checks if tools are present. Does NOT specificy configuration. | Use for quick diagnosis. |
+
 
 ---
 
@@ -192,11 +208,12 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Recent Updates
 
-### Version 2.4.2 (Latest)
-- **Windows Fix**: Fixed `yt-dlp` detection for Python 3.14 installations.
-- **Improved**: Better path handling for dependency checking.
+### Version 2.4.3 (Latest)
+- **New Feature**: Added `CONFIGURE` tools to auto-detect path for Python, ffmpeg, yt-dlp and Deno.
+- **Improved**: `downloader.js` now reads `config.json` for fail-safe tool detection.
+- **Fixed**: Solved "HTTP Error 403" / "Missing JS Runtime" by enforcing Deno path configuration.
 
-### Version 2.4.1
+### Version 2.4.2
 - ✅ **Fixed HTTP Error 403**: Updated yt-dlp dependencies to resolve YouTube access issues
 - ✅ **macOS Environment Fix**: Fixed an issue where Deno was not found by the extension on macOS
 - ✅ **Dependency Update**: Enforced latest yt-dlp version with EJS support
