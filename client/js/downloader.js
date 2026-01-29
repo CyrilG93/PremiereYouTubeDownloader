@@ -299,20 +299,7 @@ async function downloadVideo(options) {
                         }
                     }
                 } else {
-                    let errorMessage = `yt-dlp exited with code ${code}.`;
-
-                    // Smart Error Detection
-                    if (errorBuffer.includes('Could not copy Chrome cookie database')) {
-                        errorMessage = `Cookie Database Locked: Please CLOSE ${cookieBrowser} completely and try again.`;
-                    } else if (errorBuffer.includes('HTTP Error 403: Forbidden')) {
-                        errorMessage = `Access Denied (403): Please verify you are logged into YouTube on ${cookieBrowser}.`;
-                    } else if (errorBuffer.includes('Sign in to confirm your age')) {
-                        errorMessage = `Age Restricted: Please verify you are logged into YouTube on ${cookieBrowser}.`;
-                    } else {
-                        errorMessage += ` Details: ${errorBuffer}`;
-                    }
-
-                    const error = new Error(errorMessage);
+                    const error = new Error(`yt-dlp exited with code ${code}. Details: ${errorBuffer}`);
                     if (onError) onError(error);
                     reject(error);
                 }

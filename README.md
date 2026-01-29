@@ -233,11 +233,20 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Recent Updates
 
-### Version 2.5.3 (Current)
-- **Improvement**: Added meaningful error messages when browser cookies are locked or access is denied.
-- **Fixed**: Browser cookie selection was not being saved or applied (v2.5.2).
+### Version 2.5.2 (Current)
+- **Fixed**: Browser cookie selection was not being saved or applied (always defaulted to Firefox).
+- **Fixed**: "Import failed" error message appearing even when import was successful.
+- **Improved**: Safer validaton of active sequence after import.
+- **Fixed**: Removed development config file that caused path issues on Windows.
 
-### Version 2.5.2
+> [!IMPORTANT]
+> **🍪 Authentication Issue? Use Firefox!**
+> Chromium browsers (Chrome, Brave, Edge) lock their cookie files when open, preventing the download to start.
+> **We strongly recommend using Firefox** and selecting "Firefox" in the extension settings.
+> 
+> **Make sure you are logged into your YouTube account on Firefox** to avoid "Sign in required" or "403 Forbidden" errors.
+
+### Version 2.5.0 (Huge Update!) 🚀
 - **Improved**: Safer validaton of active sequence after import.
 - **Fixed**: Removed development config file that caused path issues on Windows.
 
