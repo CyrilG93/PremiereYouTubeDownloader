@@ -8,6 +8,7 @@ window.onerror = function (msg, url, line, col, error) {
 const csInterface = new CSInterface();
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 
 // --- MODULE LOADING ---
 let downloader;
@@ -108,6 +109,7 @@ const customFfmpegPathInput = document.getElementById('customFfmpegPath');
 const customDenoPathInput = document.getElementById('customDenoPath');
 const codecQuickBtns = document.querySelectorAll('.codec-quick-btn');
 const codecSection = document.getElementById('codecSection');
+const folderDepthInput = document.getElementById('folderDepth');
 
 // --- STATE ---
 let selectedFormat = 'both';
@@ -140,13 +142,11 @@ function loadSettings() {
         }
     });
 
-    // Load selected folder slot
-    if (settings.selectedFolderSlot) {
-        selectedFolderSlot = settings.selectedFolderSlot;
-        folderQuickBtns.forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.folderSlot === selectedFolderSlot);
-        });
-    }
+    // Load selected folder slot - Default to 'custom' if not set (first run)
+    selectedFolderSlot = settings.selectedFolderSlot || 'custom';
+    folderQuickBtns.forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.folderSlot === selectedFolderSlot);
+    });
 
     // Load custom folder path
     if (settings.customFolderPath) {
@@ -177,10 +177,11 @@ function loadSettings() {
         if (radio) radio.checked = true;
     }
 
-    // Load custom tool paths
+    // Load custom tool paths & depth
     if (customYtdlpPathInput) customYtdlpPathInput.value = settings.customYtdlpPath || '';
     if (customFfmpegPathInput) customFfmpegPathInput.value = settings.customFfmpegPath || '';
     if (customDenoPathInput) customDenoPathInput.value = settings.customDenoPath || '';
+    if (folderDepthInput) folderDepthInput.value = settings.folderDepth !== undefined ? settings.folderDepth : 0;
 }
 
 function saveSettings() {
@@ -197,7 +198,8 @@ function saveSettings() {
         // Custom tool paths
         customYtdlpPath: customYtdlpPathInput ? customYtdlpPathInput.value.trim() : '',
         customFfmpegPath: customFfmpegPathInput ? customFfmpegPathInput.value.trim() : '',
-        customDenoPath: customDenoPathInput ? customDenoPathInput.value.trim() : ''
+        customDenoPath: customDenoPathInput ? customDenoPathInput.value.trim() : '',
+        folderDepth: folderDepthInput ? parseInt(folderDepthInput.value, 10) : 0
     };
 
     localStorage.setItem('ytDownloaderSettings', JSON.stringify(settings));
@@ -370,20 +372,35 @@ function resolveFolderPath(callback) {
     const settings = JSON.parse(localStorage.getItem('ytDownloaderSettings') || '{}');
     let folder;
 
+    // Default depth is 0
+    const depth = settings.folderDepth !== undefined ? settings.folderDepth : 0;
+
     // Determine folder based on selected slot
     if (selectedFolderSlot === 'custom') {
-        // Custom: use textbox value
         const pathType = document.querySelector('input[name="pathType"]:checked').value;
-        folder = folderPath.value.trim();
+        const customPath = folderPath.value.trim();
 
         if (pathType === 'absolute') {
-            callback(folder);
+            // Absolute path: If empty, use OS Downloads folder as fallback
+            if (!customPath) {
+                const downloadsDir = path.join(os.homedir(), 'Downloads');
+                console.log(`Custom path empty, using OS Downloads: ${downloadsDir}`);
+                callback(downloadsDir);
+                return;
+            }
+            callback(customPath);
             return;
+        } else {
+            // Relative mode for custom path
+            folder = customPath || 'YouTube Downloads'; // Default name if empty in relative mode
         }
     } else {
         // Preset: use preset value (always relative)
         folder = settings[`folderPreset${selectedFolderSlot}`] || `Bouton ${selectedFolderSlot}`;
     }
+
+    // Clean folder name - remove ./ or ../ prefixes users might have added previously
+    folder = folder.replace(/^(\.\.?[\\/\\\\])+/, '');
 
     // Relative path resolution
     getProjectPath((projectPath) => {
@@ -393,13 +410,16 @@ function resolveFolderPath(callback) {
             return;
         }
 
-        // Cross-platform path handling using path module
-        // Get project directory (e.g., D:\...\PROJETS or /Users/.../PROJETS)
-        const projectDir = path.dirname(projectPath);
-        // Go up one level to parent (e.g., D:\...\NomProjet or /Users/.../NomProjet)
-        const parentDir = path.dirname(projectDir);
-        // Append folder name using platform-appropriate separator
-        const fullPath = path.join(parentDir, folder);
+        // Get project file directory
+        let baseDir = path.dirname(projectPath);
+
+        // Traverse up based on depth setting
+        for (let i = 0; i < depth; i++) {
+            baseDir = path.dirname(baseDir);
+        }
+
+        const fullPath = path.join(baseDir, folder);
+        console.log(`Resolved path (Depth: ${depth}): ${fullPath}`);
         callback(fullPath);
     });
 }

@@ -148,7 +148,8 @@
                             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"
                                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
-                        <input type="text" id="folderPath" placeholder="ELEMENTS" />
+                        <input type="text" id="folderPath" data-i18n-placeholder="customPlaceholder"
+                            placeholder="Custom" />
                     </div>
                     <button class="browse-btn" id="browseBtn">
                         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -234,6 +235,14 @@
                     <label for="folderPreset3" data-i18n="quickFolder3">Quick folder 3</label>
                     <input type="text" id="folderPreset3" placeholder="AUDIO" />
                 </div>
+
+                <div class="setting-item">
+                    <label for="folderDepth" data-i18n="folderDepth">Folder Depth</label>
+                    <input type="number" id="folderDepth" min="0" max="10" value="0" />
+                    <p class="settings-hint" data-i18n="folderDepthDesc"
+                        style="font-size: 11px; color: var(--text-tertiary); margin-top: 4px;">Level</p>
+                </div>
+
                 <div class="setting-item">
                     <label for="defaultFormat" data-i18n="defaultFormat">Default format</label>
                     <select id="defaultFormat">

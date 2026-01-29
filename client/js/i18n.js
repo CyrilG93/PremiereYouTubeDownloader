@@ -82,7 +82,12 @@ const i18n = (function () {
             cancelling: 'Cancelling...',
             convertingProRes: 'Converting to ProRes 422 HQ...',
             extractingAudio: 'Extracting audio...',
-            deletingOriginal: 'Deleting original file...'
+            deletingOriginal: 'Deleting original file...',
+
+            // New keys for v2.5.0
+            folderDepth: 'Folder Depth (0=Project, 1=Parent...)',
+            folderDepthDesc: 'Upward directory traversal level for quick folders',
+            customPlaceholder: 'Custom'
         },
         fr: {
             // Main UI
@@ -150,7 +155,12 @@ const i18n = (function () {
             cancelling: 'Annulation...',
             convertingProRes: 'Conversion en ProRes 422 HQ...',
             extractingAudio: 'Extraction de l\'audio...',
-            deletingOriginal: 'Suppression du fichier original...'
+            deletingOriginal: 'Suppression du fichier original...',
+
+            // New keys for v2.5.0
+            folderDepth: 'Profondeur dossiers (0=Projet, 1=Parent...)',
+            folderDepthDesc: 'Niveau de remontée pour les dossiers rapides',
+            customPlaceholder: 'Personnalisé'
         }
     };
 

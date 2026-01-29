@@ -32,14 +32,10 @@ This extension needs the following tools installed on your computer:
 
 **2. Install the Extension**:
    - Right-click `INSTALL_WINDOWS.bat` -> Select **Run as administrator**
+   - The script will install the extension AND automatically configure all tools.
    - Wait for "Installation Complete" message.
 
-**3. Configure (Recommended)**
-   - Double-click `CONFIGURE_WINDOWS.bat`
-   - This tool scans your computer for all required tools (Python, Deno, ffmpeg...) and creates a configuration file so the extension knows exactly where they are.
-   - If it says **[MISSING]** for any tool, install it and run this script again.
-
-**4. Start Premiere Pro**
+**3. Start Premiere Pro**
    - Go to **Window** > **Extensions** > **YouTube Downloader**
 
 ---
@@ -57,12 +53,10 @@ This extension needs the following tools installed on your computer:
    ```bash
    sudo ./INSTALL_MACOS.sh
    ```
+   - The script will install the extension AND automatically configure all tools.
 
-**3. Configure (Recommended)**:
-   Run the configuration script to auto-detect paths:
-   ```bash
-   ./CONFIGURE_MACOS.sh
-   ```
+**3. Start Premiere Pro**
+   - Go to **Window** > **Extensions** > **YouTube Downloader**
 
 **4. Start Premiere Pro**
    - Go to **Window** > **Extensions** > **YouTube Downloader**
@@ -75,9 +69,8 @@ The folder contains several tools to help you if something goes wrong.
 
 | File | What it does | When to use it? |
 |------|--------------|-----------------|
-| `INSTALL_WINDOWS.bat` | Installs the extension and tries to install Deno/yt-dlp automatically. | **First step** to install or update the extension. |
-| `CONFIGURE_WINDOWS.bat` | Scans your PC for tools and creates a `config.json` file. | **Run this if download fails.** It ensures the extension knows where your tools are. |
-| `CHECK_DEPENDENCIES.bat` | Just checks if tools are present. Does NOT specificy configuration. | Use for quick diagnosis. |
+| `INSTALL_WINDOWS.bat` | Installs the extension, configures paths, and sets debug mode. | **Run me first!** |
+| `CHECK_DEPENDENCIES.bat` | Just checks if tools are present. Useful for diagnosis. | Use if something is wrong. |
 
 
 ---
@@ -208,14 +201,27 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Recent Updates
 
-### Version 2.4.4 (Latest)
-- **New Feature**: **Multi-Browser Support**! You can now select which browser (Chrome, Brave, Edge, Opera, Vivaldi, Safari) to use for cookies in Settings.
-- **Improved**: Helps resolve HTTP Error 403 / SABR errors for users who don't use Firefox.
+### Version 2.5.0 (Huge Update!) 🚀
+- **Quick Folders 2.0**:
+  - **Folder Depth**: New setting to choose where downloads go relative to your project (0 = Project folder, 1 = Parent folder, etc.).
+  - **Smart Defaults**: "Custom" slot is now the default.
+  - **Auto Fallback**: If no custom path is set, downloads go to your OS Downloads folder.
+  - **Simplified Paths**: No more complex `./` or `../` prefixes needed!
+- **Unified Installers**:
+  - `INSTALL_WINDOWS.bat` and `INSTALL_MACOS.sh` now do **everything**: installation AND configuration in one go.
+- **Multi-Browser Cookies**:
+  - Select your preferred browser for cookie extraction (Chrome, Brave, Edge, Opera, Safari, Firefox).
+  - Fixes HTTP 403 errors even more reliably.
+- **UI Improvements**:
+  - More compact interface to save screen space.
+  - Smoother animations and better spacing.
+
+### Version 2.4.4
+- **Multi-Browser Support**: Added cookie browser selection to resolve SABR/403 errors.
+- **Installer Fixes**: Better permission handling on macOS.
 
 ### Version 2.4.3
-- **New Feature**: Added `CONFIGURE` tools to auto-detect path for Python, ffmpeg, yt-dlp and Deno.
-- **Improved**: `downloader.js` now reads `config.json` for fail-safe tool detection.
-- **Fixed**: Solved "HTTP Error 403" / "Missing JS Runtime" by enforcing Deno path configuration.
+- **Auto-Config**: Added configuration tools to simpler setup.
 
 ### Version 2.4.2
 - ✅ **Fixed HTTP Error 403**: Updated yt-dlp dependencies to resolve YouTube access issues

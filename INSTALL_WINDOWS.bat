@@ -1,13 +1,13 @@
 @echo off
 :: YouTube Downloader for Premiere Pro - Simple Installer
-:: Version 2.4.4
+:: Version 2.5.0
 
 title YouTube Downloader Installer
 
 echo.
 echo ========================================
 echo YouTube Downloader for Premiere Pro
-echo Installation Package v2.4.4
+echo Installation Package v2.5.0
 echo ========================================
 echo.
 
@@ -56,7 +56,7 @@ if /I "%SOURCE_DIR:~0,-1%"=="%EXTENSION_PATH%" (
 
 echo.
 echo ========================================
-echo Step 1/6: Checking Node.js
+echo Step 1/7: Checking Node.js
 echo ========================================
 echo.
 
@@ -76,7 +76,7 @@ if %errorlevel% EQU 0 (
 
 echo.
 echo ========================================
-echo Step 2/6: Checking Python
+echo Step 2/7: Checking Python
 echo ========================================
 echo.
 
@@ -97,7 +97,7 @@ if %errorlevel% EQU 0 (
 
 echo.
 echo ========================================
-echo Step 3/6: Installing yt-dlp with EJS support
+echo Step 3/7: Installing yt-dlp with EJS support
 echo ========================================
 echo.
 
@@ -118,7 +118,7 @@ if %errorlevel% EQU 0 (
 
 echo.
 echo ========================================
-echo Step 4/6: Installing Deno (for YouTube challenges)
+echo Step 4/7: Installing Deno (for YouTube challenges)
 echo ========================================
 echo.
 
@@ -140,7 +140,7 @@ if exist "%DENO_PATH%" (
 
 echo.
 echo ========================================
-echo Step 5/6: Checking ffmpeg
+echo Step 5/7: Checking ffmpeg
 echo ========================================
 echo.
 
@@ -210,7 +210,7 @@ if "%SKIP_COPY%"=="0" (
 
 echo.
 echo ========================================
-echo Step 6/6: Enabling CEP Debug Mode
+echo Step 6/7: Enabling CEP Debug Mode
 echo ========================================
 echo.
 
@@ -224,7 +224,86 @@ REG ADD "HKEY_CURRENT_USER\Software\Adobe\CSXS.15" /v PlayerDebugMode /t REG_SZ 
 REG ADD "HKEY_CURRENT_USER\Software\Adobe\CSXS.16" /v PlayerDebugMode /t REG_SZ /d 1 /f >nul 2>&1
 
 echo [OK] Debug mode enabled for CSXS 10-16
+echo.
+echo ========================================
+echo Step 7/7: Auto-Configuration
+echo ========================================
+echo.
 
+echo Scanning system paths for dependencies...
+echo.
+
+set "CONFIG_FILE=%EXTENSION_PATH%\client\js\config.json"
+
+:: Initialize variables
+set "NODE_PATH="
+set "PYTHON_PATH="
+set "YTDLP_PATH="
+set "FFMPEG_PATH="
+set "DENO_PATH="
+
+:: Find Node.js
+for /f "tokens=*" %%i in ('where node 2^>nul') do set "NODE_PATH=%%i" & goto :config_found_node
+:config_found_node
+if "%NODE_PATH%"=="" ( echo   [MISSING] Node.js ) else ( echo   [FOUND] Node.js: %NODE_PATH% )
+
+:: Find Python
+for /f "tokens=*" %%i in ('where python 2^>nul') do set "PYTHON_PATH=%%i" & goto :config_found_python
+:config_found_python
+if "%PYTHON_PATH%"=="" ( echo   [MISSING] Python ) else ( echo   [FOUND] Python: %PYTHON_PATH% )
+
+:: Find yt-dlp
+for /f "tokens=*" %%i in ('where yt-dlp 2^>nul') do set "YTDLP_PATH=%%i" & goto :config_found_ytdlp
+:config_found_ytdlp
+if "%YTDLP_PATH%"=="" ( echo   [MISSING] yt-dlp ) else ( echo   [FOUND] yt-dlp: %YTDLP_PATH% )
+
+:: Find ffmpeg
+for /f "tokens=*" %%i in ('where ffmpeg 2^>nul') do set "FFMPEG_PATH=%%i" & goto :config_found_ffmpeg
+:config_found_ffmpeg
+if "%FFMPEG_PATH%"=="" ( echo   [MISSING] ffmpeg ) else ( echo   [FOUND] ffmpeg: %FFMPEG_PATH% )
+
+:: Find Deno
+for /f "tokens=*" %%i in ('where deno 2^>nul') do set "DENO_PATH=%%i" & goto :config_found_deno
+:config_found_deno
+if "%DENO_PATH%"=="" (
+    if exist "%USERPROFILE%\.deno\bin\deno.exe" (
+        set "DENO_PATH=%USERPROFILE%\.deno\bin\deno.exe"
+        echo   [FOUND] Deno (User Dir): %DENO_PATH%
+    ) else (
+        echo   [MISSING] Deno
+    )
+) else (
+    echo   [FOUND] Deno: %DENO_PATH%
+)
+
+echo.
+echo Generating configuration file...
+
+:: JSON escaping for backslashes
+set "NODE_PATH_JSON=%NODE_PATH:\=\\%"
+set "PYTHON_PATH_JSON=%PYTHON_PATH:\=\\%"
+set "YTDLP_PATH_JSON=%YTDLP_PATH:\=\\%"
+set "FFMPEG_PATH_JSON=%FFMPEG_PATH:\=\\%"
+set "DENO_PATH_JSON=%DENO_PATH:\=\\%"
+
+:: Write to file
+(
+    echo {
+    echo   "nodePath": "%NODE_PATH_JSON%",
+    echo   "pythonPath": "%PYTHON_PATH_JSON%",
+    echo   "ytDlpPath": "%YTDLP_PATH_JSON%",
+    echo   "ffmpegPath": "%FFMPEG_PATH_JSON%",
+    echo   "denoPath": "%DENO_PATH_JSON%"
+    echo }
+) > "%CONFIG_FILE%"
+
+if exist "%CONFIG_FILE%" (
+    echo   [OK] Config file created at: %CONFIG_FILE%
+) else (
+    echo   [ERROR] Failed to write config file!
+)
+
+echo.
 echo ========================================
 echo Installation Complete!
 echo ========================================

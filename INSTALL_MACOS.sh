@@ -1,11 +1,11 @@
 #!/bin/bash
 # YouTube Downloader for Premiere Pro - macOS Installer
-# Version 2.4.4
+# Version 2.5.0
 
 echo ""
 echo "========================================"
 echo "YouTube Downloader for Premiere Pro"
-echo "Installation Package v2.4.4 - macOS"
+echo "Installation Package v2.5.0 - macOS"
 echo "========================================"
 echo ""
 
@@ -54,7 +54,7 @@ fi
 
 echo ""
 echo "========================================"
-echo "Step 1/5: Checking Node.js"
+echo "Step 1/6: Checking Node.js"
 echo "========================================"
 echo ""
 
@@ -73,7 +73,7 @@ fi
 
 echo ""
 echo "========================================"
-echo "Step 2/5: Checking Python"
+echo "Step 2/6: Checking Python"
 echo "========================================"
 echo ""
 
@@ -95,7 +95,7 @@ fi
 
 echo ""
 echo "========================================"
-echo "Step 3/5: Installing yt-dlp with EJS support"
+echo "Step 3/6: Installing yt-dlp with EJS support"
 echo "========================================"
 echo ""
 
@@ -118,7 +118,7 @@ fi
 
 echo ""
 echo "========================================"
-echo "Step 4/5: Installing Deno (for YouTube challenges)"
+echo "Step 4/6: Installing Deno (for YouTube challenges)"
 echo "========================================"
 echo ""
 
@@ -143,7 +143,7 @@ fi
 
 echo ""
 echo "========================================"
-echo "Step 5/5: Checking ffmpeg"
+echo "Step 5/6: Checking ffmpeg"
 echo "========================================"
 echo ""
 
@@ -215,6 +215,57 @@ defaults write com.adobe.CSXS.14 PlayerDebugMode 1
 defaults write com.adobe.CSXS.15 PlayerDebugMode 1
 defaults write com.adobe.CSXS.16 PlayerDebugMode 1
 echo "[OK] CEP debug mode enabled for CSXS 10-16"
+
+echo ""
+echo "========================================"
+echo "Step 6/6: Auto-Configuration"
+echo "========================================"
+echo ""
+
+echo "Scanning system paths for dependencies..."
+echo ""
+
+CONFIG_FILE="$EXTENSION_PATH/client/js/config.json"
+
+# Find paths
+NODE_PATH=$(which node)
+if [ -z "$NODE_PATH" ]; then echo "  [MISSING] Node.js"; else echo "  [FOUND] Node.js: $NODE_PATH"; fi
+
+PYTHON_PATH=$(which python3)
+[ -z "$PYTHON_PATH" ] && PYTHON_PATH=$(which python)
+if [ -z "$PYTHON_PATH" ]; then echo "  [MISSING] Python"; else echo "  [FOUND] Python: $PYTHON_PATH"; fi
+
+YTDLP_PATH=$(which yt-dlp)
+if [ -z "$YTDLP_PATH" ]; then echo "  [MISSING] yt-dlp"; else echo "  [FOUND] yt-dlp: $YTDLP_PATH"; fi
+
+FFMPEG_PATH=$(which ffmpeg)
+if [ -z "$FFMPEG_PATH" ]; then echo "  [MISSING] ffmpeg"; else echo "  [FOUND] ffmpeg: $FFMPEG_PATH"; fi
+
+DENO_PATH=$(which deno)
+if [ -z "$DENO_PATH" ]; then echo "  [MISSING] Deno"; else echo "  [FOUND] Deno: $DENO_PATH"; fi
+
+echo ""
+echo "Generating configuration file..."
+
+# Create JSON content manually
+JSON_CONTENT="{"
+JSON_CONTENT="$JSON_CONTENT\"nodePath\": \"$NODE_PATH\","
+JSON_CONTENT="$JSON_CONTENT\"pythonPath\": \"$PYTHON_PATH\","
+JSON_CONTENT="$JSON_CONTENT\"ytDlpPath\": \"$YTDLP_PATH\","
+JSON_CONTENT="$JSON_CONTENT\"ffmpegPath\": \"$FFMPEG_PATH\","
+JSON_CONTENT="$JSON_CONTENT\"denoPath\": \"$DENO_PATH\""
+JSON_CONTENT="$JSON_CONTENT}"
+
+# Write to file
+# Since we are running with sudo (potentially), ensure file is writable or created by user if possible, 
+# but usually extension folder is root owned anyway if in /Library.
+echo "$JSON_CONTENT" > "$CONFIG_FILE"
+
+if [ -f "$CONFIG_FILE" ]; then
+    echo "  [OK] Config file created at: $CONFIG_FILE"
+else
+    echo "  [ERROR] Failed to write config file!"
+fi
 
 echo ""
 echo "========================================"
