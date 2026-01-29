@@ -233,9 +233,11 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Recent Updates
 
-### Version 2.5.2 (Current)
-- **Fixed**: Browser cookie selection was not being saved or applied (always defaulted to Firefox).
-- **Fixed**: "Import failed" error message appearing even when import was successful.
+### Version 2.5.3 (Current)
+- **Improvement**: Added meaningful error messages when browser cookies are locked or access is denied.
+- **Fixed**: Browser cookie selection was not being saved or applied (v2.5.2).
+
+### Version 2.5.2
 - **Improved**: Safer validaton of active sequence after import.
 - **Fixed**: Removed development config file that caused path issues on Windows.
 
