@@ -97,13 +97,13 @@ function YouTube_importMedia(filePath, binName, createBin) {
             false // import as numbered stills
         );
 
-        if (importedItems && importedItems.length > 0) {
+        if (importedItems === true || (importedItems && importedItems.length > 0)) {
             // Select the imported item in project panel
             project.activeSequence = null; // Deselect sequence
 
             return "success";
         } else {
-            return "error: Import failed";
+            return "error: Import failed (Result: " + importedItems + ")";
         }
 
     } catch (e) {
