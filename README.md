@@ -122,6 +122,38 @@ Run in Terminal:
 
 ---
 
+---
+
+## ⚙️ Configuration & Settings
+
+Click the **Settings** (⚙️) button to customize the extension:
+
+### 🍪 Browser for Cookies
+**Essential for avoiding errors!**
+- Select the browser you use daily (Chrome, Firefox, Safari, etc.).
+- The extension extracts cookies from this browser to authenticate with YouTube.
+- **Why?** Solves "HTTP Error 403" and age-restricted video issues.
+
+### 📂 Quick Folders & Depth
+Customize where your videos land relative to your Premiere Pro project.
+
+- **Quick Folder Buttons (1, 2, 3)**: Preset names (e.g., "RUSHES", "AUDIO", "GFX") for fast switching.
+- **Folder Depth**: Defines where the folder is created relative to your project file (`.prproj`).
+  - `0`: Inside the same folder as the project (Default).
+  - `1`: One level up (Parent folder).
+  - `2`: Two levels up, etc.
+  
+  *Example with Depth 1:*
+  `Project: /User/Start/Project.prproj`
+  `Download: /User/RUSHES/video.mp4` (Instead of `/User/Start/RUSHES/...`)
+
+### ⚡ Other Options
+- **Default Format**: Choose between "Video + Audio", "Video Only" or "Audio Only" as default.
+- **Auto-Import**: Automatically import files into Premiere Pro after download.
+- **Create Project Folder**: Creates a bin inside Premiere Pro with the same name as the download folder.
+
+---
+
 ## 🔧 Installing ffmpeg on Windows
 
 ffmpeg requires manual installation on Windows:
