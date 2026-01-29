@@ -21,7 +21,8 @@ async function downloadVideo(options) {
         // Custom tool paths from settings
         customYtdlpPath,
         customFfmpegPath,
-        customDenoPath
+        customDenoPath,
+        cookieBrowser = 'firefox'
     } = options;
 
     // LOAD EXTERNAL CONFIGURATION (AUTO-DETECTED PATHS)
@@ -47,7 +48,8 @@ async function downloadVideo(options) {
             // Build yt-dlp command with custom paths
             // Priority: 1. Settings (UI) 2. AutoConfig (JSON) 3. Logic detection 4. PATH
             const effectiveFfmpegPath = customFfmpegPath || autoConfig.ffmpegPath || null;
-            const args = buildYtDlpArgs(url, format, destination, startTime, endTime, effectiveFfmpegPath);
+            const effectiveCookieBrowser = cookieBrowser || 'firefox';
+            const args = buildYtDlpArgs(url, format, destination, startTime, endTime, effectiveFfmpegPath, effectiveCookieBrowser);
 
             // Determine yt-dlp executable path
             let ytDlpPath = customYtdlpPath || autoConfig.ytDlpPath || null;
@@ -321,7 +323,7 @@ async function downloadVideo(options) {
 /**
  * Build yt-dlp command arguments
  */
-function buildYtDlpArgs(url, format, destination, startTime, endTime, customFfmpegPath) {
+function buildYtDlpArgs(url, format, destination, startTime, endTime, customFfmpegPath, cookieBrowser = 'firefox') {
     const args = [url];
 
     // Determine ffmpeg path for yt-dlp post-processing
@@ -412,7 +414,7 @@ function buildYtDlpArgs(url, format, destination, startTime, endTime, customFfmp
 
     // Use cookies from browser to bypass SABR restrictions
     // This allows access to high quality formats
-    args.push('--cookies-from-browser', 'firefox');
+    args.push('--cookies-from-browser', cookieBrowser);
 
     // Ignore errors
     args.push('--ignore-errors');

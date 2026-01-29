@@ -208,7 +208,11 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Recent Updates
 
-### Version 2.4.3 (Latest)
+### Version 2.4.4 (Latest)
+- **New Feature**: **Multi-Browser Support**! You can now select which browser (Chrome, Brave, Edge, Opera, Vivaldi, Safari) to use for cookies in Settings.
+- **Improved**: Helps resolve HTTP Error 403 / SABR errors for users who don't use Firefox.
+
+### Version 2.4.3
 - **New Feature**: Added `CONFIGURE` tools to auto-detect path for Python, ffmpeg, yt-dlp and Deno.
 - **Improved**: `downloader.js` now reads `config.json` for fail-safe tool detection.
 - **Fixed**: Solved "HTTP Error 403" / "Missing JS Runtime" by enforcing Deno path configuration.

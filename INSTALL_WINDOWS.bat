@@ -1,13 +1,13 @@
 @echo off
 :: YouTube Downloader for Premiere Pro - Simple Installer
-:: Version 2.4.3
+:: Version 2.4.4
 
 title YouTube Downloader Installer
 
 echo.
 echo ========================================
 echo YouTube Downloader for Premiere Pro
-echo Installation Package v2.4.3
+echo Installation Package v2.4.4
 echo ========================================
 echo.
 
@@ -56,7 +56,7 @@ if /I "%SOURCE_DIR:~0,-1%"=="%EXTENSION_PATH%" (
 
 echo.
 echo ========================================
-echo Step 1/5: Checking Node.js
+echo Step 1/6: Checking Node.js
 echo ========================================
 echo.
 
@@ -76,7 +76,7 @@ if %errorlevel% EQU 0 (
 
 echo.
 echo ========================================
-echo Step 2/5: Checking Python
+echo Step 2/6: Checking Python
 echo ========================================
 echo.
 
@@ -97,7 +97,7 @@ if %errorlevel% EQU 0 (
 
 echo.
 echo ========================================
-echo Step 3/5: Installing yt-dlp with EJS support
+echo Step 3/6: Installing yt-dlp with EJS support
 echo ========================================
 echo.
 
@@ -118,7 +118,7 @@ if %errorlevel% EQU 0 (
 
 echo.
 echo ========================================
-echo Step 4/5: Installing Deno (for YouTube challenges)
+echo Step 4/6: Installing Deno (for YouTube challenges)
 echo ========================================
 echo.
 
@@ -140,7 +140,7 @@ if exist "%DENO_PATH%" (
 
 echo.
 echo ========================================
-echo Step 5/5: Checking ffmpeg
+echo Step 5/6: Checking ffmpeg
 echo ========================================
 echo.
 
