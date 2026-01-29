@@ -84,6 +84,19 @@ if exist "%ProgramFiles%\Common Files\Adobe\CEP\extensions\PremiereYouTubeDownlo
 )
 echo.
 
+:: Check CEP Debug Mode
+echo [BONUS] Checking CEP Debug Mode...
+reg query "HKEY_CURRENT_USER\Software\Adobe\CSXS.11" /v PlayerDebugMode >nul 2>&1
+if %errorLevel% equ 0 (
+    echo   [OK] Debug mode enabled
+) else (
+    echo   [MISSING] Debug mode NOT enabled!
+    echo   The extension will NOT load without this.
+    echo   Run INSTALL_WINDOWS.bat as administrator to fix this.
+    set "ALL_OK=0"
+)
+echo.
+
 echo ========================================
 if "%ALL_OK%"=="1" (
     echo Result: ALL DEPENDENCIES INSTALLED! ✓

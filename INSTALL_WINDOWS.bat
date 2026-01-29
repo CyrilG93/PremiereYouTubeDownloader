@@ -205,7 +205,26 @@ if "%SKIP_COPY%"=="0" (
     echo [OK] Extension files installed successfully!
 )
 
+    echo [OK] Extension files installed successfully!
+)
+
 echo.
+echo ========================================
+echo Step 6/6: Enabling CEP Debug Mode
+echo ========================================
+echo.
+
+echo Enabling player debug mode (required for extension to load)...
+REG ADD "HKEY_CURRENT_USER\Software\Adobe\CSXS.10" /v PlayerDebugMode /t REG_SZ /d 1 /f >nul 2>&1
+REG ADD "HKEY_CURRENT_USER\Software\Adobe\CSXS.11" /v PlayerDebugMode /t REG_SZ /d 1 /f >nul 2>&1
+REG ADD "HKEY_CURRENT_USER\Software\Adobe\CSXS.12" /v PlayerDebugMode /t REG_SZ /d 1 /f >nul 2>&1
+REG ADD "HKEY_CURRENT_USER\Software\Adobe\CSXS.13" /v PlayerDebugMode /t REG_SZ /d 1 /f >nul 2>&1
+REG ADD "HKEY_CURRENT_USER\Software\Adobe\CSXS.14" /v PlayerDebugMode /t REG_SZ /d 1 /f >nul 2>&1
+REG ADD "HKEY_CURRENT_USER\Software\Adobe\CSXS.15" /v PlayerDebugMode /t REG_SZ /d 1 /f >nul 2>&1
+REG ADD "HKEY_CURRENT_USER\Software\Adobe\CSXS.16" /v PlayerDebugMode /t REG_SZ /d 1 /f >nul 2>&1
+
+echo [OK] Debug mode enabled for CSXS 10-16
+
 echo ========================================
 echo Installation Complete!
 echo ========================================
