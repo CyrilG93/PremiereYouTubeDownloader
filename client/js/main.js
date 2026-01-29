@@ -69,7 +69,7 @@ console.error = function (...args) {
     addLog(args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' '), 'error');
 };
 
-console.log("YouTube Downloader v2.5.0 - Serverless Mode Initialized");
+console.log("YouTube Downloader v2.5.1 - Serverless Mode Initialized");
 
 if (toggleLogsBtn) {
     toggleLogsBtn.addEventListener('click', () => {

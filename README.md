@@ -233,6 +233,11 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Recent Updates
 
+### Version 2.5.1 (Current)
+- **Hotfix**: Fixed "Import failed" error message appearing even when import was successful.
+- **Improved**: Safer validaton of active sequence after import.
+- **Fixed**: Removed development config file that caused path issues on Windows.
+
 ### Version 2.5.0 (Huge Update!) 🚀
 - **Quick Folders 2.0**:
   - **Folder Depth**: New setting to choose where downloads go relative to your project (0 = Project folder, 1 = Parent folder, etc.).

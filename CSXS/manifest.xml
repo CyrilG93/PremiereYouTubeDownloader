@@ -1,4 +1,4 @@
-<ExtensionManifest Version="7.0" ExtensionBundleId="com.youtubedownloader.premiere" ExtensionBundleVersion="2.5.0"
+<ExtensionManifest Version="7.0" ExtensionBundleId="com.youtubedownloader.premiere" ExtensionBundleVersion="2.5.1"
                    ExtensionBundleName="YouTube Downloader" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <Author>
     <![CDATA[YouTube Downloader Extension]]>
@@ -11,7 +11,7 @@
     <![CDATA[Download YouTube videos directly into Premiere Pro with customizable options.]]>
   </Abstract>
   <ExtensionList>
-    <Extension Id="com.youtubedownloader.premiere.panel" Version="2.5.0"/>
+    <Extension Id="com.youtubedownloader.premiere.panel" Version="2.5.1"/>
   </ExtensionList>
   <ExecutionEnvironment>
     <HostList>
