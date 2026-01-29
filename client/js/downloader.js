@@ -181,7 +181,7 @@ async function downloadVideo(options) {
                     if (onProgress) {
                         onProgress({
                             progress: percent,
-                            status: 'Téléchargement en cours...'
+                            status: 'downloadInProgress'
                         });
                     }
                 }
@@ -191,7 +191,7 @@ async function downloadVideo(options) {
                     if (onProgress) {
                         onProgress({
                             progress: 95,
-                            status: 'Fusion des formats...'
+                            status: 'merging'
                         });
                     }
                 }
@@ -200,7 +200,7 @@ async function downloadVideo(options) {
                     if (onProgress) {
                         onProgress({
                             progress: 98,
-                            status: 'Finalisation...'
+                            status: 'finalizing'
                         });
                     }
                 }
@@ -522,7 +522,7 @@ function convertToProRes(inputFile, customFfmpegPath, onProgress, callback) {
         if (onProgress) {
             onProgress({
                 progress: 95,
-                status: 'Conversion en ProRes 422 HQ...'
+                status: 'convertingProRes'
             });
         }
 
@@ -591,7 +591,7 @@ function convertToProRes(inputFile, customFfmpegPath, onProgress, callback) {
             if (timeMatch && onProgress) {
                 onProgress({
                     progress: 96,
-                    status: 'Conversion en ProRes 422 HQ...'
+                    status: 'convertingProRes'
                 });
             }
         });

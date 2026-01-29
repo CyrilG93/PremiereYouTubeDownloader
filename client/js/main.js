@@ -451,7 +451,9 @@ async function downloadVideo() {
                 customFfmpegPath: settings.customFfmpegPath || null,
                 customDenoPath: settings.customDenoPath || null,
                 onProgress: (data) => {
-                    updateProgress(data.progress, data.status);
+                    // Translate status message if it's a key, otherwise show as is
+                    const statusText = i18n.get(data.status);
+                    updateProgress(data.progress, statusText);
                 },
                 onComplete: (filePath) => {
                     updateProgress(100, i18n.get('downloadComplete'));

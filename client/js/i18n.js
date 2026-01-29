@@ -80,7 +80,9 @@ const i18n = (function () {
             finalizing: 'Finalizing...',
             importing: 'Importing to Premiere...',
             cancelling: 'Cancelling...',
-            convertingProRes: 'Converting to ProRes 422 HQ...'
+            convertingProRes: 'Converting to ProRes 422 HQ...',
+            extractingAudio: 'Extracting audio...',
+            deletingOriginal: 'Deleting original file...'
         },
         fr: {
             // Main UI
@@ -146,7 +148,9 @@ const i18n = (function () {
             finalizing: 'Finalisation...',
             importing: 'Import dans Premiere...',
             cancelling: 'Annulation...',
-            convertingProRes: 'Conversion en ProRes 422 HQ...'
+            convertingProRes: 'Conversion en ProRes 422 HQ...',
+            extractingAudio: 'Extraction de l\'audio...',
+            deletingOriginal: 'Suppression du fichier original...'
         }
     };
 
