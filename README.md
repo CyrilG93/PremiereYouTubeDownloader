@@ -239,7 +239,11 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Recent Updates
 
-### Version 2.5.4 (Current)
+### Version 2.5.5 (Current)
+- **UX**: Added subtle texture to Quick Folders that are in Relative mode (vs Solid for Absolute).
+- **UX**: Minor visual refinements.
+
+### Version 2.5.4
 - **Feature**: "Quick Folders" now support Absolute paths (Smart Detection).
 - **UX**: Renamed buttons to "Quick Folder X" / "Dossier Rapide X".
 - **UX**: Clarified that empty Custom folder defaults to Downloads.

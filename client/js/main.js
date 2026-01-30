@@ -69,7 +69,7 @@ console.error = function (...args) {
     addLog(args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' '), 'error');
 };
 
-console.log("YouTube Downloader v2.5.4 - Serverless Mode Initialized");
+console.log("YouTube Downloader v2.5.5 - Serverless Mode Initialized");
 
 if (toggleLogsBtn) {
     toggleLogsBtn.addEventListener('click', () => {
@@ -142,6 +142,34 @@ function loadSettings() {
         }
     });
 
+    updateQuickFolderVisuals(settings);
+}
+
+function updateQuickFolderVisuals(settings) {
+    if (!folderQuickBtns) return;
+
+    folderQuickBtns.forEach(btn => {
+        const slot = btn.dataset.folderSlot;
+        if (slot === 'custom') return;
+
+        // helper to get value
+        // if inside loadSettings, settings might be partial, but here we pass full settings obj
+        // or we can re-read if needed, but passing is better.
+        // Fallback to i18n default if empty
+        const value = settings[`folderPreset${slot}`] || i18n.get(`button${slot}`);
+
+        // Remove existing class
+        btn.classList.remove('relative');
+
+        // Check if relative (NOT absolute)
+        // We consider it relative if it's NOT absolute.
+        // If it is just a name like "MyFolder", it is relative.
+        // If it is "C:/Users", it is absolute.
+        if (value && !path.isAbsolute(value)) {
+            btn.classList.add('relative');
+        }
+    });
+
     // Load selected folder slot - Default to 'custom' if not set (first run)
     selectedFolderSlot = settings.selectedFolderSlot || 'custom';
     folderQuickBtns.forEach(btn => {
@@ -204,16 +232,18 @@ function saveSettings() {
     localStorage.setItem('ytDownloaderSettings', JSON.stringify(settings));
 
     // Update button labels after save
+    // Update button labels and visuals after save
     folderQuickBtns.forEach(btn => {
         const slot = btn.dataset.folderSlot;
-        if (slot === '1' && settings.folderPreset1) {
-            btn.querySelector('span').textContent = settings.folderPreset1;
-        } else if (slot === '2' && settings.folderPreset2) {
-            btn.querySelector('span').textContent = settings.folderPreset2;
-        } else if (slot === '3' && settings.folderPreset3) {
-            btn.querySelector('span').textContent = settings.folderPreset3;
+        if (slot !== 'custom') {
+            const presetValue = settings[`folderPreset${slot}`];
+            if (presetValue) {
+                btn.querySelector('span').textContent = presetValue;
+            }
         }
     });
+
+    updateQuickFolderVisuals(settings);
 
     showStatus(i18n.get('settingsSaved'), 'success');
     setTimeout(() => {
