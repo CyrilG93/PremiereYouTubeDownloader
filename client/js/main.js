@@ -571,15 +571,25 @@ function importToPremiere(filePath, createBin) {
     let binName;
 
     if (selectedFolderSlot === 'custom') {
-        // Custom: use textbox value (keep full path for nested bins)
+        // Custom: use textbox value
         binName = folderPath.value.trim() || 'YouTube Downloads';
-        // Remove leading ./ and ../ prefixes only
-        binName = binName.replace(/^(\.\.?[\\/\\\\])+/, '');
+        // If absolute path, use only basename for the bin
+        if (path.isAbsolute(path.normalize(binName))) {
+            binName = path.basename(binName);
+        } else {
+            // Remove leading ./ and ../ prefixes only
+            binName = binName.replace(/^(\.\.?[\\/\\\\])+/, '');
+        }
     } else {
-        // Preset: use preset value (keep full path for nested bins)
+        // Preset: use preset value
         binName = settings[`folderPreset${selectedFolderSlot}`] || `Bouton ${selectedFolderSlot}`;
-        // Remove leading ./ and ../ prefixes only
-        binName = binName.replace(/^(\.\.?[\\/\\\\])+/, '');
+        // If absolute path, use only basename for the bin
+        if (path.isAbsolute(path.normalize(binName))) {
+            binName = path.basename(binName);
+        } else {
+            // Remove leading ./ and ../ prefixes only
+            binName = binName.replace(/^(\.\.?[\\/\\\\])+/, '');
+        }
     }
     console.log(`Bin path: ${binName}`);
 
