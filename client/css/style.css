@@ -391,7 +391,12 @@ input[type="text"]:not(:placeholder-shown)~.clear-btn {
     transform: translateY(-1px);
 }
 
-
+.folder-quick-btn.active {
+    background: var(--accent-gradient);
+    border-color: var(--accent-primary);
+    color: var(--text-primary);
+    box-shadow: 0 2px 8px rgba(255, 0, 0, 0.3);
+}
 
 .folder-controls {
     display: flex;
