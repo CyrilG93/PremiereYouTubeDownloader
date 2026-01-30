@@ -239,7 +239,11 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Recent Updates
 
-### Version 2.5.2 (Current)
+### Version 2.5.3 (Current)
+- **Feature**: Auto-detection of Absolute vs Relative paths in Custom Folder (removed manual buttons).
+- **Hotfix**: Fixed Windows Installer closing instantly.
+
+### Version 2.5.2
 - **Fixed**: Browser cookie selection was not being saved or applied (always defaulted to Firefox).
 - **Fixed**: "Import failed" error message appearing even when import was successful.
 - **Improved**: Safer validaton of active sequence after import.

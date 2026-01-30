@@ -69,7 +69,7 @@ console.error = function (...args) {
     addLog(args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' '), 'error');
 };
 
-console.log("YouTube Downloader v2.5.2 - Serverless Mode Initialized");
+console.log("YouTube Downloader v2.5.3 - Serverless Mode Initialized");
 
 if (toggleLogsBtn) {
     toggleLogsBtn.addEventListener('click', () => {
@@ -171,11 +171,7 @@ function loadSettings() {
         document.getElementById('createBin').checked = settings.createBin;
     }
 
-    // Load path type
-    if (settings.pathType) {
-        const radio = document.querySelector(`input[name="pathType"][value="${settings.pathType}"]`);
-        if (radio) radio.checked = true;
-    }
+
 
     // Load custom tool paths & depth
     if (customYtdlpPathInput) customYtdlpPathInput.value = settings.customYtdlpPath || '';
@@ -195,7 +191,6 @@ function saveSettings() {
         defaultFormat: document.getElementById('defaultFormat').value,
         autoImport: document.getElementById('autoImport').checked,
         createBin: document.getElementById('createBin').checked,
-        pathType: document.querySelector('input[name="pathType"]:checked').value,
         customFolderPath: folderPath.value.trim(),
         selectedFolderSlot: selectedFolderSlot,
         // Custom tool paths
@@ -267,7 +262,6 @@ browseBtn.addEventListener('click', () => {
     csInterface.evalScript('YouTube_selectFolder()', (result) => {
         if (result && result !== 'null') {
             folderPath.value = result;
-            document.querySelector('input[name="pathType"][value="absolute"]').checked = true;
         }
     });
 });
@@ -303,13 +297,7 @@ folderPath.addEventListener('change', () => {
     localStorage.setItem('ytDownloaderSettings', JSON.stringify(settings));
 });
 
-pathTypeRadios.forEach(radio => {
-    radio.addEventListener('change', () => {
-        const settings = JSON.parse(localStorage.getItem('ytDownloaderSettings') || '{}');
-        settings.pathType = radio.value;
-        localStorage.setItem('ytDownloaderSettings', JSON.stringify(settings));
-    });
-});
+
 
 // Folder quick select buttons
 folderQuickBtns.forEach(btn => {
@@ -381,22 +369,23 @@ function resolveFolderPath(callback) {
 
     // Determine folder based on selected slot
     if (selectedFolderSlot === 'custom') {
-        const pathType = document.querySelector('input[name="pathType"]:checked').value;
         const customPath = folderPath.value.trim();
 
-        if (pathType === 'absolute') {
-            // Absolute path: If empty, use OS Downloads folder as fallback
-            if (!customPath) {
-                const downloadsDir = path.join(os.homedir(), 'Downloads');
-                console.log(`Custom path empty, using OS Downloads: ${downloadsDir}`);
-                callback(downloadsDir);
-                return;
-            }
+        if (!customPath) {
+            // If empty, use OS Downloads folder (Absolute fallback)
+            const downloadsDir = path.join(os.homedir(), 'Downloads');
+            console.log(`Custom path empty, using OS Downloads: ${downloadsDir}`);
+            callback(downloadsDir);
+            return;
+        }
+
+        if (path.isAbsolute(customPath)) {
+            // Absolute path processing
             callback(customPath);
             return;
         } else {
-            // Relative mode for custom path
-            folder = customPath || 'YouTube Downloads'; // Default name if empty in relative mode
+            // Relative path processing
+            folder = customPath;
         }
     } else {
         // Preset: use preset value (always relative)
