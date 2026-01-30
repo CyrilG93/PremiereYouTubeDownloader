@@ -69,7 +69,7 @@ console.error = function (...args) {
     addLog(args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' '), 'error');
 };
 
-console.log("YouTube Downloader v2.5.3 - Serverless Mode Initialized");
+console.log("YouTube Downloader v2.5.4 - Serverless Mode Initialized");
 
 if (toggleLogsBtn) {
     toggleLogsBtn.addEventListener('click', () => {
@@ -124,9 +124,9 @@ function loadSettings() {
 
     // Load folder presets
     const presets = {
-        1: settings.folderPreset1 || 'Bouton 1',
-        2: settings.folderPreset2 || 'Bouton 2',
-        3: settings.folderPreset3 || 'Bouton 3'
+        1: settings.folderPreset1 || i18n.get('button1'),
+        2: settings.folderPreset2 || i18n.get('button2'),
+        3: settings.folderPreset3 || i18n.get('button3')
     };
 
     // Update preset input fields
@@ -388,8 +388,17 @@ function resolveFolderPath(callback) {
             folder = customPath;
         }
     } else {
-        // Preset: use preset value (always relative)
-        folder = settings[`folderPreset${selectedFolderSlot}`] || `Bouton ${selectedFolderSlot}`;
+        // Preset
+        const presetValue = settings[`folderPreset${selectedFolderSlot}`] || i18n.get(`button${selectedFolderSlot}`);
+
+        if (path.isAbsolute(presetValue)) {
+            // Absolute path in preset
+            callback(presetValue);
+            return;
+        }
+
+        // Relative path in preset
+        folder = presetValue;
     }
 
     // Clean folder name - remove ./ or ../ prefixes users might have added previously

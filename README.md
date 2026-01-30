@@ -239,7 +239,12 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Recent Updates
 
-### Version 2.5.3 (Current)
+### Version 2.5.4 (Current)
+- **Feature**: "Quick Folders" now support Absolute paths (Smart Detection).
+- **UX**: Renamed buttons to "Quick Folder X" / "Dossier Rapide X".
+- **UX**: Clarified that empty Custom folder defaults to Downloads.
+
+### Version 2.5.3
 - **Feature**: Auto-detection of Absolute vs Relative paths in Custom Folder (removed manual buttons).
 - **Hotfix**: Fixed Windows Installer closing instantly.
 
