@@ -239,7 +239,12 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Recent Updates
 
-### Version 2.5.7 (Current)
+### Version 2.5.8 (Current)
+- **Fix**: Time range now supports HH:MM:SS format for videos over 1 hour (was MM:SS before).
+- **Fix**: Fixed corrupted files when downloading time ranges from long videos (removed redundant ffmpeg trim).
+- **UI**: ffmpeg progress logs no longer appear in red (was misleading as errors).
+
+### Version 2.5.7
 - **UX**: Removed button texture (Cleaner look).
 - **UX**: Absolute path buttons now only show the folder name (Basename) instead of the full path.
 - **Settings**: Added "Browse" buttons for Quick Folders.

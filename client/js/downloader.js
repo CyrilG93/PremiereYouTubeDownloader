@@ -242,11 +242,12 @@ async function downloadVideo(options) {
                 }
             });
 
-            // Handle stderr
+            // Handle stderr (ffmpeg outputs progress info here, not just errors)
             ytDlp.stderr.on('data', (data) => {
                 const errorStr = data.toString();
                 errorBuffer += errorStr;
-                console.error('yt-dlp stderr:', errorStr);
+                // Use console.log since ffmpeg sends progress/metadata to stderr (not actual errors)
+                console.log('yt-dlp stderr:', errorStr);
             });
 
             // Handle completion
@@ -269,34 +270,21 @@ async function downloadVideo(options) {
                     console.log(`Final file to be used: ${downloadedFile}`);
                     console.log(`File exists: ${downloadedFile && fs.existsSync(downloadedFile)}`);
 
-                    if (startTime !== undefined && endTime !== undefined && downloadedFile) {
-                        console.log(`Applying time trimming: ${startTime}s to ${endTime}s`);
-                        trimVideo(downloadedFile, startTime, endTime, (trimmedFile) => {
-                            const fileToProcess = trimmedFile || downloadedFile;
-                            // Apply ProRes conversion if needed
-                            if (codec === 'prores' && format !== 'audio') {
-                                convertToProRes(fileToProcess, customFfmpegPath, onProgress, (proresFile) => {
-                                    const finalFile = proresFile || fileToProcess;
-                                    if (onComplete) onComplete(finalFile);
-                                    resolve(finalFile);
-                                });
-                            } else {
-                                if (onComplete) onComplete(fileToProcess);
-                                resolve(fileToProcess);
-                            }
+                    // NOTE: When startTime/endTime are specified, yt-dlp uses --download-sections
+                    // which already downloads ONLY the requested section. No additional trimming needed.
+                    // Previously, we called trimVideo here which corrupted the file by seeking
+                    // to the original timestamp (e.g., 1 hour) in a file that's only 5 minutes.
+
+                    // Apply ProRes conversion if needed
+                    if (codec === 'prores' && format !== 'audio' && downloadedFile) {
+                        convertToProRes(downloadedFile, customFfmpegPath, onProgress, (proresFile) => {
+                            const finalFile = proresFile || downloadedFile;
+                            if (onComplete) onComplete(finalFile);
+                            resolve(finalFile);
                         });
                     } else {
-                        // Apply ProRes conversion if needed (no trimming)
-                        if (codec === 'prores' && format !== 'audio' && downloadedFile) {
-                            convertToProRes(downloadedFile, customFfmpegPath, onProgress, (proresFile) => {
-                                const finalFile = proresFile || downloadedFile;
-                                if (onComplete) onComplete(finalFile);
-                                resolve(finalFile);
-                            });
-                        } else {
-                            if (onComplete) onComplete(downloadedFile);
-                            resolve(downloadedFile);
-                        }
+                        if (onComplete) onComplete(downloadedFile);
+                        resolve(downloadedFile);
                     }
                 } else {
                     const error = new Error(`yt-dlp exited with code ${code}. Details: ${errorBuffer}`);

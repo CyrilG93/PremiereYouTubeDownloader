@@ -69,7 +69,7 @@ console.error = function (...args) {
     addLog(args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' '), 'error');
 };
 
-console.log("YouTube Downloader v2.5.7 - Serverless Mode Initialized");
+console.log("YouTube Downloader v2.5.8 - Serverless Mode Initialized");
 
 if (toggleLogsBtn) {
     toggleLogsBtn.addEventListener('click', () => {
@@ -692,12 +692,20 @@ function initLanguageDropdown() {
     });
 }
 
-// Time input formatting
+// Time input formatting for HH:MM:SS
 function formatTimeInput(input) {
     input.addEventListener('input', (e) => {
         let value = e.target.value.replace(/[^0-9:]/g, '');
 
-        if (value.length === 2 && !value.includes(':')) {
+        // Count existing colons
+        const colonCount = (value.match(/:/g) || []).length;
+
+        // Auto-insert first colon after 2 digits (HH:)
+        if (value.length === 2 && colonCount === 0) {
+            value += ':';
+        }
+        // Auto-insert second colon after 5 chars (HH:MM:)
+        else if (value.length === 5 && colonCount === 1) {
             value += ':';
         }
 
@@ -706,8 +714,20 @@ function formatTimeInput(input) {
 
     input.addEventListener('blur', (e) => {
         let value = e.target.value;
-        if (value && !value.includes(':')) {
-            e.target.value = value + ':00';
+        if (!value) return;
+
+        const parts = value.split(':');
+
+        // Normalize to HH:MM:SS format
+        if (parts.length === 1) {
+            // Just numbers, assume as seconds or minutes
+            e.target.value = '00:00:' + parts[0].padStart(2, '0');
+        } else if (parts.length === 2) {
+            // MM:SS format - add hours
+            e.target.value = '00:' + parts[0].padStart(2, '0') + ':' + parts[1].padStart(2, '0');
+        } else if (parts.length === 3) {
+            // HH:MM:SS format - just pad
+            e.target.value = parts[0].padStart(2, '0') + ':' + parts[1].padStart(2, '0') + ':' + parts[2].padStart(2, '0');
         }
     });
 }
