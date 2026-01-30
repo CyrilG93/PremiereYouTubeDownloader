@@ -244,6 +244,8 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 - **Fix**: Fixed corrupted files when downloading time ranges from long videos (removed redundant ffmpeg trim).
 - **UI**: ffmpeg progress logs no longer appear in red (was misleading as errors).
 
+> **Note**: Time range downloads are slower than full downloads. This is a YouTube limitation—the video must be streamed and processed in near real-time rather than downloaded directly.
+
 ### Version 2.5.7
 - **UX**: Removed button texture (Cleaner look).
 - **UX**: Absolute path buttons now only show the folder name (Basename) instead of the full path.
