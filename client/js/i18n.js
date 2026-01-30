@@ -33,6 +33,26 @@ const i18n = (function () {
             button1: 'Quick Folder 1',
             button2: 'Quick Folder 2',
             button3: 'Quick Folder 3',
+            // Settings
+            settings: 'Settings',
+            quickFolder1: 'Quick folder 1',
+            quickFolder2: 'Quick folder 2',
+            quickFolder3: 'Quick folder 3',
+            folderDepth: 'Folder Depth',
+            folderDepthDesc: 'Level',
+            defaultFormat: 'Default format',
+            autoImport: 'Auto-import to Premiere',
+            createBin: 'Create project folder',
+            cookieBrowserLabel: 'Browser for Cookies',
+            save: 'Save',
+            // Advanced
+            advancedTools: 'Advanced Tools',
+            advancedToolsDesc: 'Optional custom paths. Leave empty for auto-detection.',
+            ytdlpPath: 'yt-dlp path',
+            ffmpegPath: 'ffmpeg path',
+            denoPath: 'deno path (optional)',
+            browsePath: 'Browse',
+            settingsSaved: 'Settings saved!',
         },
         fr: {
             // Main UI
@@ -51,6 +71,26 @@ const i18n = (function () {
             button1: 'Dossier Rapide 1',
             button2: 'Dossier Rapide 2',
             button3: 'Dossier Rapide 3',
+            // Settings
+            settings: 'Paramètres',
+            quickFolder1: 'Dossier rapide 1',
+            quickFolder2: 'Dossier rapide 2',
+            quickFolder3: 'Dossier rapide 3',
+            folderDepth: 'Profondeur dossier',
+            folderDepthDesc: 'Niveau',
+            defaultFormat: 'Format par défaut',
+            autoImport: 'Import auto dans Premiere',
+            createBin: 'Créer un dossier chutier',
+            cookieBrowserLabel: 'Navigateur pour Cookies',
+            save: 'Enregistrer',
+            // Advanced
+            advancedTools: 'Outils Avancés',
+            advancedToolsDesc: 'Chemins personnalisés optionnels. Laisser vide pour auto-détection.',
+            ytdlpPath: 'Chemin yt-dlp',
+            ffmpegPath: 'Chemin ffmpeg',
+            denoPath: 'Chemin deno (optionnel)',
+            browsePath: 'Parcourir',
+            settingsSaved: 'Paramètres sauvegardés !',
         }
     };
 

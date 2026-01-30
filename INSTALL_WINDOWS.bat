@@ -1,13 +1,13 @@
 @echo off
 :: YouTube Downloader for Premiere Pro - Simple Installer
-:: Version 2.5.6
+:: Version 2.5.7
 
 title YouTube Downloader Installer
 
 echo.
 echo ========================================
 echo YouTube Downloader for Premiere Pro
-echo Installation Package v2.5.6
+echo Installation Package v2.5.7
 echo ========================================
 echo.
 

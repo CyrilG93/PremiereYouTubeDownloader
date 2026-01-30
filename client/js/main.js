@@ -69,7 +69,7 @@ console.error = function (...args) {
     addLog(args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' '), 'error');
 };
 
-console.log("YouTube Downloader v2.5.6 - Serverless Mode Initialized");
+console.log("YouTube Downloader v2.5.7 - Serverless Mode Initialized");
 
 if (toggleLogsBtn) {
     toggleLogsBtn.addEventListener('click', () => {
@@ -134,13 +134,8 @@ function loadSettings() {
     if (folderPreset2Input) folderPreset2Input.value = settings.folderPreset2 || '';
     if (folderPreset3Input) folderPreset3Input.value = settings.folderPreset3 || '';
 
-    // Update button labels
-    folderQuickBtns.forEach(btn => {
-        const slot = btn.dataset.folderSlot;
-        if (slot !== 'custom' && presets[slot]) {
-            btn.querySelector('span').textContent = presets[slot];
-        }
-    });
+    // Button labels are updated by updateQuickFolderVisuals below
+    // to handle the absolute path truncation logic centrally
 
     updateQuickFolderVisuals(settings);
 }
@@ -158,16 +153,17 @@ function updateQuickFolderVisuals(settings) {
         // Fallback to i18n default if empty
         const value = settings[`folderPreset${slot}`] || i18n.get(`button${slot}`);
 
-        // Remove existing class
-        btn.classList.remove('relative');
-
-        // Check if relative (NOT absolute)
-        // We consider it relative if it's NOT absolute.
-        // If it is just a name like "MyFolder", it is relative.
-        // If it is "C:/Users", it is absolute.
+        // Update label logic:
+        // If absolute path -> show basename only (e.g. "Test" from "C:/.../Test")
+        // If relative path -> show value as is
         const normalizedValue = path.normalize(value);
-        if (value && !path.isAbsolute(normalizedValue)) {
-            btn.classList.add('relative');
+        if (value && path.isAbsolute(normalizedValue)) {
+            // Absolute: show basename
+            // Handle root paths (C:\ or /) gracefully if needed, but basename usually works
+            btn.querySelector('span').textContent = path.basename(normalizedValue);
+        } else {
+            // Relative: show as is
+            btn.querySelector('span').textContent = value;
         }
     });
 
@@ -234,15 +230,6 @@ function saveSettings() {
 
     // Update button labels after save
     // Update button labels and visuals after save
-    folderQuickBtns.forEach(btn => {
-        const slot = btn.dataset.folderSlot;
-        if (slot !== 'custom') {
-            const presetValue = settings[`folderPreset${slot}`];
-            if (presetValue) {
-                btn.querySelector('span').textContent = presetValue;
-            }
-        }
-    });
 
     updateQuickFolderVisuals(settings);
 
@@ -310,9 +297,15 @@ document.querySelectorAll('.browse-path-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         const targetInputId = btn.dataset.target;
         const targetInput = document.getElementById(targetInputId);
+        const type = btn.dataset.type || 'file'; // file or folder
+
         if (targetInput) {
             // Use ExtendScript to open file dialog
-            csInterface.evalScript('File.openDialog("Select executable")', (result) => {
+            const script = type === 'folder'
+                ? 'YouTube_selectFolder()'
+                : 'File.openDialog("Select executable")';
+
+            csInterface.evalScript(script, (result) => {
                 if (result && result !== 'null') {
                     targetInput.value = result;
                 }

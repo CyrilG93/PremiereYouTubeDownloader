@@ -239,7 +239,13 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Recent Updates
 
-### Version 2.5.6 (Current)
+### Version 2.5.7 (Current)
+- **UX**: Removed button texture (Cleaner look).
+- **UX**: Absolute path buttons now only show the folder name (Basename) instead of the full path.
+- **Settings**: Added "Browse" buttons for Quick Folders.
+- **Fix**: Corrected missing translations in Settings.
+
+### Version 2.5.6
 - **Fix**: Improved cross-platform robustness for Absolute vs Relative path detection (better handling of mixed separators).
 
 ### Version 2.5.5
