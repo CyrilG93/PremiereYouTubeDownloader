@@ -244,22 +244,22 @@ set "DENO_PATH="
 :: Find Node.js
 for /f "tokens=*" %%i in ('where node 2^>nul') do set "NODE_PATH=%%i" & goto :config_found_node
 :config_found_node
-if "%NODE_PATH%"=="" ( echo   [MISSING] Node.js ) else ( echo   [FOUND] Node.js: %NODE_PATH% )
+if "%NODE_PATH%"=="" ( echo   [MISSING] Node.js ) else ( echo   [FOUND] Node.js: "%NODE_PATH%" )
 
 :: Find Python
 for /f "tokens=*" %%i in ('where python 2^>nul') do set "PYTHON_PATH=%%i" & goto :config_found_python
 :config_found_python
-if "%PYTHON_PATH%"=="" ( echo   [MISSING] Python ) else ( echo   [FOUND] Python: %PYTHON_PATH% )
+if "%PYTHON_PATH%"=="" ( echo   [MISSING] Python ) else ( echo   [FOUND] Python: "%PYTHON_PATH%" )
 
 :: Find yt-dlp
 for /f "tokens=*" %%i in ('where yt-dlp 2^>nul') do set "YTDLP_PATH=%%i" & goto :config_found_ytdlp
 :config_found_ytdlp
-if "%YTDLP_PATH%"=="" ( echo   [MISSING] yt-dlp ) else ( echo   [FOUND] yt-dlp: %YTDLP_PATH% )
+if "%YTDLP_PATH%"=="" ( echo   [MISSING] yt-dlp ) else ( echo   [FOUND] yt-dlp: "%YTDLP_PATH%" )
 
 :: Find ffmpeg
 for /f "tokens=*" %%i in ('where ffmpeg 2^>nul') do set "FFMPEG_PATH=%%i" & goto :config_found_ffmpeg
 :config_found_ffmpeg
-if "%FFMPEG_PATH%"=="" ( echo   [MISSING] ffmpeg ) else ( echo   [FOUND] ffmpeg: %FFMPEG_PATH% )
+if "%FFMPEG_PATH%"=="" ( echo   [MISSING] ffmpeg ) else ( echo   [FOUND] ffmpeg: "%FFMPEG_PATH%" )
 
 :: Find Deno
 for /f "tokens=*" %%i in ('where deno 2^>nul') do set "DENO_PATH=%%i" & goto :config_found_deno
@@ -267,12 +267,12 @@ for /f "tokens=*" %%i in ('where deno 2^>nul') do set "DENO_PATH=%%i" & goto :co
 if "%DENO_PATH%"=="" (
     if exist "%USERPROFILE%\.deno\bin\deno.exe" (
         set "DENO_PATH=%USERPROFILE%\.deno\bin\deno.exe"
-        echo   [FOUND] Deno (User Dir): %DENO_PATH%
+        echo   [FOUND] Deno User Dir: "%USERPROFILE%\.deno\bin\deno.exe"
     ) else (
         echo   [MISSING] Deno
     )
 ) else (
-    echo   [FOUND] Deno: %DENO_PATH%
+    echo   [FOUND] Deno: "%DENO_PATH%"
 )
 
 echo.
