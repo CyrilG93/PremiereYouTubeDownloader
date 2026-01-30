@@ -239,7 +239,10 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Recent Updates
 
-### Version 2.5.5 (Current)
+### Version 2.5.6 (Current)
+- **Fix**: Improved cross-platform robustness for Absolute vs Relative path detection (better handling of mixed separators).
+
+### Version 2.5.5
 - **UX**: Added subtle texture to Quick Folders that are in Relative mode (vs Solid for Absolute).
 - **UX**: Minor visual refinements.
 

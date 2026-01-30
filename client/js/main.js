@@ -69,7 +69,7 @@ console.error = function (...args) {
     addLog(args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' '), 'error');
 };
 
-console.log("YouTube Downloader v2.5.5 - Serverless Mode Initialized");
+console.log("YouTube Downloader v2.5.6 - Serverless Mode Initialized");
 
 if (toggleLogsBtn) {
     toggleLogsBtn.addEventListener('click', () => {
@@ -165,7 +165,8 @@ function updateQuickFolderVisuals(settings) {
         // We consider it relative if it's NOT absolute.
         // If it is just a name like "MyFolder", it is relative.
         // If it is "C:/Users", it is absolute.
-        if (value && !path.isAbsolute(value)) {
+        const normalizedValue = path.normalize(value);
+        if (value && !path.isAbsolute(normalizedValue)) {
             btn.classList.add('relative');
         }
     });
@@ -409,9 +410,10 @@ function resolveFolderPath(callback) {
             return;
         }
 
-        if (path.isAbsolute(customPath)) {
+        const normalizedCustom = path.normalize(customPath);
+        if (path.isAbsolute(normalizedCustom)) {
             // Absolute path processing
-            callback(customPath);
+            callback(normalizedCustom);
             return;
         } else {
             // Relative path processing
@@ -421,9 +423,10 @@ function resolveFolderPath(callback) {
         // Preset
         const presetValue = settings[`folderPreset${selectedFolderSlot}`] || i18n.get(`button${selectedFolderSlot}`);
 
-        if (path.isAbsolute(presetValue)) {
+        const normalizedPreset = path.normalize(presetValue);
+        if (path.isAbsolute(normalizedPreset)) {
             // Absolute path in preset
-            callback(presetValue);
+            callback(normalizedPreset);
             return;
         }
 
