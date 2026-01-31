@@ -122,11 +122,12 @@ Run in Terminal:
 - ✅ Automatic H.264 video codec (Premiere Pro compatible)
 - ✅ Automatic AAC audio conversion (no more silent videos!)
 - ✅ Choose output format: MP3, WAV, or FLAC
-- ✅ Time range selection (download specific sections)
+- ✅ Time range selection (download specific sections)*
 - ✅ Auto-import into project bins
 - ✅ Relative or absolute path support
 - ✅ Multi-language support (English/French)
 
+*> **Note**: Time range downloads are slower than full downloads. This is a YouTube limitation—the video must be streamed and processed in near real-time rather than downloaded directly.
 ---
 
 ---
