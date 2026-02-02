@@ -118,9 +118,81 @@ let selectedCodec = 'h264';
 let isDownloading = false;
 let downloadAbortController = null;
 
+// --- SETTINGS STORAGE HELPERS ---
+function getSettingsDir() {
+    const platform = os.platform();
+    if (platform === 'darwin') {
+        return path.join(os.homedir(), 'Library', 'Application Support', 'PremiereYouTubeDownloader');
+    } else {
+        return path.join(process.env.APPDATA || os.homedir(), 'PremiereYouTubeDownloader');
+    }
+}
+
+function getSettingsFilePath() {
+    return path.join(getSettingsDir(), 'settings.json');
+}
+
+function readSettingsFromFile() {
+    try {
+        const filePath = getSettingsFilePath();
+        if (fs.existsSync(filePath)) {
+            const data = fs.readFileSync(filePath, 'utf8');
+            return JSON.parse(data);
+        }
+    } catch (e) {
+        console.error('Error reading settings file:', e);
+    }
+    return null;
+}
+
+function writeSettingsToFile(settings) {
+    try {
+        const dir = getSettingsDir();
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+        const filePath = getSettingsFilePath();
+        fs.writeFileSync(filePath, JSON.stringify(settings, null, 2), 'utf8');
+        console.log('Settings saved to file:', filePath);
+    } catch (e) {
+        console.error('Error writing settings file:', e);
+    }
+}
+
 // --- SETTINGS ---
 function loadSettings() {
-    const settings = JSON.parse(localStorage.getItem('ytDownloaderSettings') || '{}');
+    let settings = null;
+    let migrated = false;
+
+    // 1. Try to load from persistent file
+    const fileSettings = readSettingsFromFile();
+    if (fileSettings) {
+        settings = fileSettings;
+        console.log('Settings loaded from persistent file');
+    } else {
+        // 2. Fallback: load from localStorage (migration)
+        const localSettings = localStorage.getItem('ytDownloaderSettings');
+        if (localSettings) {
+            try {
+                settings = JSON.parse(localSettings);
+                migrated = true;
+                console.log('Settings migrated from localStorage');
+            } catch (e) {
+                console.error('Error parsing localStorage settings:', e);
+            }
+        }
+    }
+
+    // Default empty if nothing found
+    if (!settings) settings = {};
+
+    // 3. If migrated, save to file immediately
+    if (migrated) {
+        writeSettingsToFile(settings);
+    }
+
+    // Ensure localStorage is synced (backup)
+    localStorage.setItem('ytDownloaderSettings', JSON.stringify(settings));
 
     // Load folder presets
     const presets = {
@@ -226,6 +298,10 @@ function saveSettings() {
         cookieBrowser: document.getElementById('cookieBrowser') ? document.getElementById('cookieBrowser').value : 'firefox'
     };
 
+    // Save to persistent file
+    writeSettingsToFile(settings);
+
+    // Save to localStorage (backup/legacy)
     localStorage.setItem('ytDownloaderSettings', JSON.stringify(settings));
 
     // Update button labels after save
@@ -316,8 +392,9 @@ document.querySelectorAll('.browse-path-btn').forEach(btn => {
 
 saveSettingsBtn.addEventListener('click', saveSettings);
 folderPath.addEventListener('change', () => {
-    const settings = JSON.parse(localStorage.getItem('ytDownloaderSettings') || '{}');
+    const settings = readSettingsFromFile() || {};
     settings.customFolderPath = folderPath.value.trim();
+    writeSettingsToFile(settings);
     localStorage.setItem('ytDownloaderSettings', JSON.stringify(settings));
 });
 
@@ -331,8 +408,9 @@ folderQuickBtns.forEach(btn => {
         selectedFolderSlot = btn.dataset.folderSlot;
 
         // Save selection
-        const settings = JSON.parse(localStorage.getItem('ytDownloaderSettings') || '{}');
+        const settings = readSettingsFromFile() || {};
         settings.selectedFolderSlot = selectedFolderSlot;
+        writeSettingsToFile(settings);
         localStorage.setItem('ytDownloaderSettings', JSON.stringify(settings));
     });
 });
@@ -385,7 +463,7 @@ function getProjectPath(callback) {
 }
 
 function resolveFolderPath(callback) {
-    const settings = JSON.parse(localStorage.getItem('ytDownloaderSettings') || '{}');
+    const settings = readSettingsFromFile() || {};
     let folder;
 
     // Default depth is 0
@@ -487,7 +565,7 @@ async function downloadVideo() {
         downloadAbortController = new AbortController();
 
         try {
-            const settings = JSON.parse(localStorage.getItem('ytDownloaderSettings') || '{}');
+            const settings = readSettingsFromFile() || {};
             const options = {
                 url: url,
                 format: selectedFormat,
@@ -567,7 +645,7 @@ function importToPremiere(filePath, createBin) {
     console.log(`File exists: YES`);
 
     // Determine bin name based on selected folder slot
-    const settings = JSON.parse(localStorage.getItem('ytDownloaderSettings') || '{}');
+    const settings = readSettingsFromFile() || {};
     let binName;
 
     if (selectedFolderSlot === 'custom') {
