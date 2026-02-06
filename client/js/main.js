@@ -729,7 +729,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================================================
 
 const GITHUB_REPO = 'CyrilG93/PremiereYouTubeDownloader';
-let CURRENT_VERSION = '2.5.0'; // SIMULATED OLD VERSION FOR TESTING
+let CURRENT_VERSION = '2.6.0';
 
 /**
  * Compare two version strings (e.g. "1.0.0" vs "1.0.1")
