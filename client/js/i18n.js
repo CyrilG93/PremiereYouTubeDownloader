@@ -56,6 +56,7 @@ const i18n = (function () {
             denoPath: 'deno path (optional)',
             browsePath: 'Browse',
             settingsSaved: 'Settings saved!',
+            updateAvailable: '🚀 New version available! Click to update.',
         },
         fr: {
             // Main UI
@@ -97,6 +98,7 @@ const i18n = (function () {
             denoPath: 'Chemin deno (optionnel)',
             browsePath: 'Parcourir',
             settingsSaved: 'Paramètres sauvegardés !',
+            updateAvailable: '🚀 Nouvelle version disponible ! Cliquez pour mettre à jour.',
         }
     };
 

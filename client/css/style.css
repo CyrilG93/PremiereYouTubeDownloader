@@ -1146,3 +1146,47 @@ input[type="text"]:not(:placeholder-shown)~.clear-btn {
     background: var(--bg-tertiary);
     border-color: var(--text-tertiary);
 }
+
+/* Update Banner */
+#updateBanner {
+    display: none;
+    background: linear-gradient(135deg, #00c853 0%, #009624 100%);
+    color: white;
+    text-align: center;
+    padding: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+    animation: slideDown 0.3s ease-out;
+    position: relative;
+    z-index: 100;
+}
+
+#updateBanner:hover {
+    filter: brightness(1.1);
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Version Badge (Settings Header) */
+.version-badge {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    margin-left: 8px;
+    font-weight: 500;
+}

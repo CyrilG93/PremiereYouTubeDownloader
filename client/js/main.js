@@ -721,7 +721,147 @@ document.addEventListener('DOMContentLoaded', () => {
     initLanguageDropdown();
 
     loadSettings();
+    checkForUpdates();
 });
+
+// ============================================================================
+// UPDATE SYSTEM
+// ============================================================================
+
+const GITHUB_REPO = 'CyrilG93/PremiereYouTubeDownloader';
+let CURRENT_VERSION = '2.5.0'; // SIMULATED OLD VERSION FOR TESTING
+
+/**
+ * Compare two version strings (e.g. "1.0.0" vs "1.0.1")
+ */
+function compareVersions(v1, v2) {
+    const p1 = v1.replace(/^v/, '').split('.').map(Number);
+    const p2 = v2.replace(/^v/, '').split('.').map(Number);
+    const len = Math.max(p1.length, p2.length);
+
+    for (let i = 0; i < len; i++) {
+        const num1 = p1[i] || 0;
+        const num2 = p2[i] || 0;
+        if (num1 > num2) return 1;
+        if (num1 < num2) return -1;
+    }
+    return 0;
+}
+
+/**
+ * Get current version from manifest
+ */
+function getAppVersion() {
+    try {
+        const path = require('path');
+        const fs = require('fs');
+        const manifestPath = path.join(__dirname, '..', '..', 'CSXS', 'manifest.xml');
+
+        if (fs.existsSync(manifestPath)) {
+            const content = fs.readFileSync(manifestPath, 'utf8');
+            const match = content.match(/ExtensionBundleVersion="([^"]+)"/);
+            if (match && match[1]) {
+                return match[1];
+            }
+        }
+    } catch (e) {
+        console.error('[Update] Error reading manifest:', e);
+    }
+    return CURRENT_VERSION;
+}
+
+/**
+ * Check for updates on GitHub
+ */
+async function checkForUpdates() {
+    console.log('[Update] Checking for updates...');
+    const localVersion = getAppVersion();
+    console.log('[Update] Local version:', localVersion);
+
+    // Update settings badge
+    const versionBadge = document.getElementById('versionInfo');
+    if (versionBadge) {
+        versionBadge.textContent = 'v' + localVersion;
+    }
+
+    try {
+        // Use Node.js https module to avoid CORS issues
+        const https = require('https');
+        const options = {
+            hostname: 'api.github.com',
+            path: `/repos/${GITHUB_REPO}/releases/latest`,
+            method: 'GET',
+            headers: {
+                'User-Agent': 'PremiereCommon-UpdateCheck'
+            }
+        };
+
+        const req = https.request(options, (res) => {
+            let data = '';
+            res.on('data', (chunk) => data += chunk);
+            res.on('end', () => {
+                try {
+                    if (res.statusCode === 200) {
+                        const release = JSON.parse(data);
+                        const latestVersion = release.tag_name.replace(/^v/, '');
+
+                        console.log('[Update] Latest version:', latestVersion);
+
+                        if (compareVersions(latestVersion, localVersion) > 0) {
+                            console.log('[Update] New version available!');
+
+                            // Find zip asset
+                            const zipAsset = release.assets.find(asset => asset.name.endsWith('.zip'));
+                            const downloadUrl = zipAsset ? zipAsset.browser_download_url : release.html_url;
+
+                            showUpdateBanner(downloadUrl);
+                        } else {
+                            console.log('[Update] App is up to date.');
+                        }
+                    } else {
+                        console.error('[Update] GitHub API error:', res.statusCode);
+                    }
+                } catch (e) {
+                    console.error('[Update] Error parsing response:', e);
+                }
+            });
+        });
+
+        req.on('error', (e) => {
+            console.error('[Update] Network error:', e);
+        });
+
+        req.end();
+
+    } catch (e) {
+        console.error('[Update] Unexpected error:', e);
+    }
+}
+
+/**
+ * Show update banner
+ */
+function showUpdateBanner(downloadUrl) {
+    const banner = document.getElementById('updateBanner');
+    if (banner) {
+        banner.style.display = 'block';
+        banner.onclick = function () {
+            if (downloadUrl) {
+                try {
+                    csInterface.openURLInDefaultBrowser(downloadUrl);
+                } catch (e) {
+                    console.error('[Update] Error opening URL:', e);
+                    // Fallback
+                    try {
+                        window.location.href = downloadUrl;
+                    } catch (e2) {
+                        console.error('[Update] Fallback failed:', e2);
+                    }
+                }
+            }
+        };
+    }
+}
 
 // --- LANGUAGE DROPDOWN ---
 function initLanguageDropdown() {
