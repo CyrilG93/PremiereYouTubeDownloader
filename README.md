@@ -240,7 +240,13 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Recent Updates
 
-### Version 2.5.8 (Current)
+### Version 2.6.1 (Current)
+- **Fix**: Installers now properly force-upgrade yt-dlp and Deno to latest versions (was silently skipping updates).
+- **Fix**: Removed `--quiet` flag from pip upgrade to show progress and errors.
+- **New**: `UPDATE_DEPENDENCIES` scripts replace `CHECK_DEPENDENCIES` — force-update all tools with before/after version display.
+- **UI**: Installers now show `[UPDATED] old → new` or `[OK] latest` for each dependency.
+
+### Version 2.5.8
 - **Fix**: Time range now supports HH:MM:SS format for videos over 1 hour (was MM:SS before).
 - **Fix**: Fixed corrupted files when downloading time ranges from long videos (removed redundant ffmpeg trim).
 - **UI**: ffmpeg progress logs no longer appear in red (was misleading as errors).
