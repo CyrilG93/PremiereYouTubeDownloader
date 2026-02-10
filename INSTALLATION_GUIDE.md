@@ -129,14 +129,16 @@ Wait for completion. Verify installations with `node --version`, `python3 --vers
 
 ---
 
-## ✅ Verify Your Installation
+## ✅ Update Your Dependencies
+
+To force-update all dependencies (yt-dlp, Deno, ffmpeg) to the latest versions:
 
 ### Windows
-Run `CHECK_DEPENDENCIES.bat` by double-clicking it.
+Run `UPDATE_DEPENDENCIES.bat` by double-clicking it.
 
 ### macOS
 ```bash
-./CHECK_DEPENDENCIES.sh
+./UPDATE_DEPENDENCIES.sh
 ```
 
 Expected output (all should show [OK]):
@@ -200,7 +202,7 @@ If you still have issues:
 
 If you encounter issues:
 1. Check the logs in the extension (click the "Logs" button)
-2. Run the dependency checker script
+2. Run `UPDATE_DEPENDENCIES` to ensure all tools are up to date
 3. Check `config.json` is not overriding your settings incorrectly.
 
 ---

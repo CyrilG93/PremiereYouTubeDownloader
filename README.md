@@ -77,7 +77,7 @@ The folder contains several tools to help you if something goes wrong.
 | File | What it does | When to use it? |
 |------|--------------|-----------------|
 | `INSTALL_WINDOWS.bat` | Installs the extension, configures paths, and sets debug mode. | **Run me first!** |
-| `CHECK_DEPENDENCIES.bat` | Just checks if tools are present. Useful for diagnosis. | Use if something is wrong. |
+| `UPDATE_DEPENDENCIES.bat` | Forces update of all dependencies (yt-dlp, Deno, etc.) to latest versions. | Run regularly to stay up to date. |
 
 
 ---
@@ -88,15 +88,15 @@ See [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md) for detailed step-by-step ins
 
 ---
 
-## ✅ Verify Installation
+## ✅ Update Dependencies
 
 ### Windows
-Run `CHECK_DEPENDENCIES.bat` to verify all dependencies are installed.
+Run `UPDATE_DEPENDENCIES.bat` to force-update all dependencies to the latest versions.
 
 ### macOS
 Run in Terminal:
 ```bash
-./CHECK_DEPENDENCIES.sh
+./UPDATE_DEPENDENCIES.sh
 ```
 
 ---
@@ -339,8 +339,8 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 |------|-------------|
 | `INSTALL_WINDOWS.bat` | Automated installer for Windows (run as admin) |
 | `INSTALL_MACOS.sh` | Automated installer for macOS (run with sudo) |
-| `CHECK_DEPENDENCIES.bat` | Verify dependencies (Windows) |
-| `CHECK_DEPENDENCIES.sh` | Verify dependencies (macOS) |
+| `UPDATE_DEPENDENCIES.bat` | Force-update all dependencies (Windows) |
+| `UPDATE_DEPENDENCIES.sh` | Force-update all dependencies (macOS) |
 | `INSTALLATION_GUIDE.md` | Detailed manual installation instructions |
 | `client/` | Extension UI and logic |
 | `host/` | Premiere Pro integration (ExtendScript) |

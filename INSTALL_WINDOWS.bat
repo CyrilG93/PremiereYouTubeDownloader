@@ -101,16 +101,38 @@ echo Step 3/7: Installing yt-dlp with EJS support
 echo ========================================
 echo.
 
-echo Installing/updating yt-dlp with all dependencies...
-python -m pip install --upgrade "yt-dlp[default]" --quiet 2>nul
-if %errorlevel% NEQ 0 (
-    echo Trying alternative installation method...
-    python -m pip install --upgrade yt-dlp yt-dlp-ejs --quiet
-)
-
+set "PYTDL_OLD_VERSION="
 yt-dlp --version >nul 2>&1
 if %errorlevel% EQU 0 (
-    for /f "tokens=*" %%i in ('yt-dlp --version') do echo [OK] yt-dlp version: %%i
+    for /f "tokens=*" %%i in ('yt-dlp --version') do set "PYTDL_OLD_VERSION=%%i"
+)
+
+if defined PYTDL_OLD_VERSION (
+    echo [OK] yt-dlp currently installed: %PYTDL_OLD_VERSION%
+    echo Checking for updates...
+) else (
+    echo Installing yt-dlp...
+)
+
+python -m pip install --upgrade "yt-dlp[default]" 2>&1
+if %errorlevel% NEQ 0 (
+    echo Trying alternative installation method...
+    python -m pip install --upgrade yt-dlp yt-dlp-ejs 2>&1
+)
+
+set "PYTDL_NEW_VERSION="
+yt-dlp --version >nul 2>&1
+if %errorlevel% EQU 0 (
+    for /f "tokens=*" %%i in ('yt-dlp --version') do set "PYTDL_NEW_VERSION=%%i"
+    if defined PYTDL_OLD_VERSION (
+        if not "%PYTDL_OLD_VERSION%"=="%PYTDL_NEW_VERSION%" (
+            echo [UPDATED] yt-dlp updated: %PYTDL_OLD_VERSION% -^> %PYTDL_NEW_VERSION%
+        ) else (
+            echo [OK] yt-dlp version: %PYTDL_NEW_VERSION% ^(latest^)
+        )
+    ) else (
+        echo [OK] yt-dlp version: %PYTDL_NEW_VERSION%
+    )
     echo [OK] yt-dlp-ejs package included for YouTube compatibility
 ) else (
     echo [WARNING] yt-dlp installation may have failed
@@ -124,8 +146,19 @@ echo.
 
 :: Check if deno is already installed
 set "DENO_PATH=%USERPROFILE%\.deno\bin\deno.exe"
+set "DENO_OLD_VERSION="
 if exist "%DENO_PATH%" (
-    echo [OK] Deno already installed at: %DENO_PATH%
+    for /f "tokens=2" %%i in ('"%DENO_PATH%" --version 2^>nul ^| findstr "deno"') do set "DENO_OLD_VERSION=%%i"
+    echo [OK] Deno currently installed: %DENO_OLD_VERSION%
+    echo Checking for updates...
+    "%DENO_PATH%" upgrade 2>&1
+    set "DENO_NEW_VERSION="
+    for /f "tokens=2" %%i in ('"%DENO_PATH%" --version 2^>nul ^| findstr "deno"') do set "DENO_NEW_VERSION=%%i"
+    if not "%DENO_OLD_VERSION%"=="%DENO_NEW_VERSION%" (
+        echo [UPDATED] Deno updated: %DENO_OLD_VERSION% -^> %DENO_NEW_VERSION%
+    ) else (
+        echo [OK] Deno version: %DENO_NEW_VERSION% ^(latest^)
+    )
 ) else (
     echo Installing Deno...
     powershell -Command "irm https://deno.land/install.ps1 | iex" >nul 2>&1
@@ -200,7 +233,7 @@ if "%SKIP_COPY%"=="0" (
     if exist "%SOURCE_DIR%.debug" copy /Y "%SOURCE_DIR%.debug" "%EXTENSION_PATH%\.debug" >nul
     if exist "%SOURCE_DIR%README.md" copy /Y "%SOURCE_DIR%README.md" "%EXTENSION_PATH%\README.md" >nul
     if exist "%SOURCE_DIR%INSTALLATION_GUIDE.md" copy /Y "%SOURCE_DIR%INSTALLATION_GUIDE.md" "%EXTENSION_PATH%\INSTALLATION_GUIDE.md" >nul
-    if exist "%SOURCE_DIR%CHECK_DEPENDENCIES.bat" copy /Y "%SOURCE_DIR%CHECK_DEPENDENCIES.bat" "%EXTENSION_PATH%\CHECK_DEPENDENCIES.bat" >nul
+    if exist "%SOURCE_DIR%UPDATE_DEPENDENCIES.bat" copy /Y "%SOURCE_DIR%UPDATE_DEPENDENCIES.bat" "%EXTENSION_PATH%\UPDATE_DEPENDENCIES.bat" >nul
     
     echo [OK] Extension files installed successfully!
 )

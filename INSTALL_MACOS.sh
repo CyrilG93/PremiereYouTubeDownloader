@@ -29,7 +29,7 @@ echo "[OK] Running with appropriate permissions"
 
 # Ensure helper scripts have execution permissions
 chmod +x "$SOURCE_DIR/CONFIGURE_MACOS.sh" 2>/dev/null
-chmod +x "$SOURCE_DIR/CHECK_DEPENDENCIES.sh" 2>/dev/null
+chmod +x "$SOURCE_DIR/UPDATE_DEPENDENCIES.sh" 2>/dev/null
 chmod +x "$SOURCE_DIR/INSTALL_MACOS.sh" 2>/dev/null
 
 echo ""
@@ -100,17 +100,22 @@ echo "========================================"
 echo ""
 
 if command -v yt-dlp &> /dev/null; then
-    echo "[OK] yt-dlp already installed"
-    echo "Updating to latest version..."
-    python3 -m pip install --upgrade "yt-dlp[default]" --quiet 2>/dev/null || pip3 install --upgrade "yt-dlp[default]" --quiet
+    OLD_VERSION=$(yt-dlp --version)
+    echo "[OK] yt-dlp currently installed: $OLD_VERSION"
+    echo "Checking for updates..."
+    python3 -m pip install --upgrade "yt-dlp[default]" 2>&1 || pip3 install --upgrade "yt-dlp[default]" 2>&1
 else
     echo "Installing yt-dlp..."
-    python3 -m pip install "yt-dlp[default]" --quiet 2>/dev/null || pip3 install "yt-dlp[default]" --quiet
+    python3 -m pip install "yt-dlp[default]" 2>&1 || pip3 install "yt-dlp[default]" 2>&1
 fi
 
 if command -v yt-dlp &> /dev/null; then
-    YTDLP_VERSION=$(yt-dlp --version)
-    echo "[OK] yt-dlp version: $YTDLP_VERSION"
+    NEW_VERSION=$(yt-dlp --version)
+    if [ -n "$OLD_VERSION" ] && [ "$OLD_VERSION" != "$NEW_VERSION" ]; then
+        echo "[UPDATED] yt-dlp updated: $OLD_VERSION -> $NEW_VERSION"
+    else
+        echo "[OK] yt-dlp version: $NEW_VERSION (latest)"
+    fi
     echo "[OK] yt-dlp-ejs package included for YouTube compatibility"
 else
     echo "[WARNING] yt-dlp installation may have failed"
@@ -123,8 +128,20 @@ echo "========================================"
 echo ""
 
 if command -v deno &> /dev/null; then
-    DENO_VERSION=$(deno --version | head -n 1)
-    echo "[OK] Deno already installed: $DENO_VERSION"
+    OLD_DENO=$(deno --version | head -n 1)
+    echo "[OK] Deno currently installed: $OLD_DENO"
+    echo "Checking for updates..."
+    if command -v brew &> /dev/null; then
+        brew upgrade deno 2>&1 || true
+    else
+        curl -fsSL https://deno.land/install.sh | sh 2>&1 || true
+    fi
+    NEW_DENO=$(deno --version | head -n 1)
+    if [ "$OLD_DENO" != "$NEW_DENO" ]; then
+        echo "[UPDATED] Deno updated: $OLD_DENO -> $NEW_DENO"
+    else
+        echo "[OK] Deno version: $NEW_DENO (latest)"
+    fi
 else
     echo "Installing Deno..."
     if command -v brew &> /dev/null; then
