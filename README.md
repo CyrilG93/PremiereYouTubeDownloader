@@ -26,8 +26,6 @@ This extension needs the following tools installed on your computer:
 
 ---
 
-## 🚀 Installation
-
 ## 🚀 Installation & Setup
 
 ### Windows - Step by Step
