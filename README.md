@@ -86,7 +86,7 @@ See [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md) for detailed step-by-step ins
 
 ---
 
-## ✅ Update Dependencies
+## ✅ How to update Dependencies
 
 ### Windows
 Run `UPDATE_DEPENDENCIES.bat` to force-update all dependencies to the latest versions.
