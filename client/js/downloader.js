@@ -277,7 +277,7 @@ async function downloadVideo(options) {
 
                     // Apply ProRes conversion if needed
                     if (codec === 'prores' && format !== 'audio' && downloadedFile) {
-                        convertToProRes(downloadedFile, customFfmpegPath, onProgress, (proresFile) => {
+                        convertToProRes(downloadedFile, effectiveFfmpegPath, onProgress, (proresFile) => {
                             const finalFile = proresFile || downloadedFile;
                             if (onComplete) onComplete(finalFile);
                             resolve(finalFile);
@@ -353,8 +353,13 @@ function buildYtDlpArgs(url, format, destination, startTime, endTime, customFfmp
         ffmpegPath = 'ffmpeg';
     }
 
+    ffmpegPath = normalizeFfmpegExecutablePath(ffmpegPath);
+
     // Tell yt-dlp where to find ffmpeg
-    args.push('--ffmpeg-location', path.dirname(ffmpegPath));
+    const ffmpegLocation = path.dirname(ffmpegPath);
+    if (ffmpegLocation && ffmpegLocation !== '.') {
+        args.push('--ffmpeg-location', ffmpegLocation);
+    }
 
     // Format selection
     if (format === 'audio') {
@@ -515,7 +520,7 @@ function convertToProRes(inputFile, customFfmpegPath, onProgress, callback) {
         }
 
         // Determine ffmpeg executable path
-        let ffmpegPath = customFfmpegPath || autoConfig.ffmpegPath || null;
+        let ffmpegPath = customFfmpegPath || null;
 
         if (!ffmpegPath && os.platform() === 'win32') {
             const userHome = os.homedir();
@@ -549,6 +554,8 @@ function convertToProRes(inputFile, customFfmpegPath, onProgress, callback) {
             ffmpegPath = 'ffmpeg';
         }
 
+        ffmpegPath = normalizeFfmpegExecutablePath(ffmpegPath);
+
         // ProRes 422 HQ encoding arguments
         // -c:v prores_ks: Use Apple ProRes Kostya encoder
         // -profile:v 3: ProRes 422 HQ profile (0=Proxy, 1=LT, 2=422, 3=HQ)
@@ -565,6 +572,7 @@ function convertToProRes(inputFile, customFfmpegPath, onProgress, callback) {
         ];
 
         console.log('Executing ffmpeg for ProRes conversion:', args.join(' '));
+        console.log('Using ffmpeg path for ProRes conversion:', ffmpegPath);
 
         const ffmpeg = spawn(ffmpegPath, args, {
             shell: false,
@@ -607,9 +615,34 @@ function convertToProRes(inputFile, customFfmpegPath, onProgress, callback) {
         });
 
     } catch (error) {
-        console.error('ProRes conversion error:', error);
+        console.error('ProRes conversion error:', error && error.stack ? error.stack : error);
         callback(null);
     }
+}
+
+/**
+ * Normalize an ffmpeg setting value to an executable path.
+ * Accepts either a direct binary path or a directory containing ffmpeg.
+ */
+function normalizeFfmpegExecutablePath(ffmpegPath) {
+    if (!ffmpegPath || typeof ffmpegPath !== 'string') {
+        return 'ffmpeg';
+    }
+
+    const trimmed = ffmpegPath.trim();
+    if (!trimmed) {
+        return 'ffmpeg';
+    }
+
+    try {
+        if (fs.existsSync(trimmed) && fs.statSync(trimmed).isDirectory()) {
+            return path.join(trimmed, os.platform() === 'win32' ? 'ffmpeg.exe' : 'ffmpeg');
+        }
+    } catch (e) {
+        console.warn('Unable to inspect ffmpeg path, using provided value:', trimmed, e.message);
+    }
+
+    return trimmed;
 }
 
 /**

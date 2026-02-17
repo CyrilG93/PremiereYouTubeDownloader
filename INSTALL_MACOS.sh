@@ -1,11 +1,11 @@
 #!/bin/bash
 # YouTube Downloader for Premiere Pro - macOS Installer
-# Version 2.6.1
+# Version 2.6.2
 
 echo ""
 echo "========================================"
 echo "YouTube Downloader for Premiere Pro"
-echo "Installation Package v2.6.1 - macOS"
+echo "Installation Package v2.6.2 - macOS"
 echo "========================================"
 echo ""
 
@@ -26,6 +26,61 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 echo "[OK] Running with appropriate permissions"
+
+# Track the original interactive user for non-privileged package-manager calls
+INVOKING_USER="${SUDO_USER:-$USER}"
+INVOKING_HOME="$(eval echo "~$INVOKING_USER")"
+
+run_as_invoking_user() {
+    if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
+        sudo -H -u "$SUDO_USER" "$@"
+    else
+        "$@"
+    fi
+}
+
+find_tool_path() {
+    local tool="$1"
+    local found=""
+
+    found="$(command -v "$tool" 2>/dev/null || true)"
+
+    if [ -z "$found" ] && [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
+        found="$(run_as_invoking_user sh -lc "command -v $tool 2>/dev/null" | head -n 1)"
+    fi
+
+    if [ -z "$found" ]; then
+        case "$tool" in
+            yt-dlp)
+                for candidate in \
+                    "$INVOKING_HOME/.local/bin/yt-dlp" \
+                    "$INVOKING_HOME"/Library/Python/*/bin/yt-dlp \
+                    "/opt/homebrew/bin/yt-dlp" \
+                    "/usr/local/bin/yt-dlp"; do
+                    if [ -x "$candidate" ]; then
+                        found="$candidate"
+                        break
+                    fi
+                done
+                ;;
+            deno)
+                for candidate in \
+                    "$INVOKING_HOME/.deno/bin/deno" \
+                    "/opt/homebrew/bin/deno" \
+                    "/usr/local/bin/deno"; do
+                    if [ -x "$candidate" ]; then
+                        found="$candidate"
+                        break
+                    fi
+                done
+                ;;
+        esac
+    fi
+
+    echo "$found"
+}
+
+BREW_BIN=$(find_tool_path "brew")
 
 # Ensure helper scripts have execution permissions
 chmod +x "$SOURCE_DIR/CONFIGURE_MACOS.sh" 2>/dev/null
@@ -58,8 +113,9 @@ echo "Step 1/6: Checking Node.js"
 echo "========================================"
 echo ""
 
-if command -v node &> /dev/null; then
-    NODE_VERSION=$(node --version)
+NODE_BIN=$(find_tool_path "node")
+if [ -n "$NODE_BIN" ]; then
+    NODE_VERSION=$("$NODE_BIN" --version)
     echo "[OK] Node.js installed: $NODE_VERSION"
 else
     echo "[MISSING] Node.js not found"
@@ -77,11 +133,13 @@ echo "Step 2/6: Checking Python"
 echo "========================================"
 echo ""
 
-if command -v python3 &> /dev/null; then
-    PYTHON_VERSION=$(python3 --version)
-    echo "[OK] Python installed: $PYTHON_VERSION"
-elif command -v python &> /dev/null; then
-    PYTHON_VERSION=$(python --version)
+PYTHON_BIN=$(find_tool_path "python3")
+if [ -z "$PYTHON_BIN" ]; then
+    PYTHON_BIN=$(find_tool_path "python")
+fi
+
+if [ -n "$PYTHON_BIN" ]; then
+    PYTHON_VERSION=$("$PYTHON_BIN" --version)
     echo "[OK] Python installed: $PYTHON_VERSION"
 else
     echo "[MISSING] Python not found"
@@ -99,22 +157,26 @@ echo "Step 3/6: Installing yt-dlp with EJS support"
 echo "========================================"
 echo ""
 
-if command -v yt-dlp &> /dev/null; then
-    OLD_VERSION=$(yt-dlp --version)
+YTDLP_PATH_RUNTIME=$(find_tool_path "yt-dlp")
+if [ -n "$YTDLP_PATH_RUNTIME" ]; then
+    OLD_VERSION=$("$YTDLP_PATH_RUNTIME" --version 2>/dev/null)
     echo "[OK] yt-dlp currently installed: $OLD_VERSION"
     echo "Checking for updates..."
-    python3 -m pip install --upgrade "yt-dlp[default]" 2>&1 || pip3 install --upgrade "yt-dlp[default]" 2>&1
+    run_as_invoking_user "$PYTHON_BIN" -m pip install --upgrade --user "yt-dlp[default]" 2>&1 || \
+        run_as_invoking_user pip3 install --upgrade --user "yt-dlp[default]" 2>&1
 else
     echo "Installing yt-dlp..."
-    python3 -m pip install "yt-dlp[default]" 2>&1 || pip3 install "yt-dlp[default]" 2>&1
+    run_as_invoking_user "$PYTHON_BIN" -m pip install --user "yt-dlp[default]" 2>&1 || \
+        run_as_invoking_user pip3 install --user "yt-dlp[default]" 2>&1
 fi
 
-if command -v yt-dlp &> /dev/null; then
-    NEW_VERSION=$(yt-dlp --version)
+YTDLP_PATH_RUNTIME=$(find_tool_path "yt-dlp")
+if [ -n "$YTDLP_PATH_RUNTIME" ]; then
+    NEW_VERSION=$("$YTDLP_PATH_RUNTIME" --version 2>/dev/null)
     if [ -n "$OLD_VERSION" ] && [ "$OLD_VERSION" != "$NEW_VERSION" ]; then
         echo "[UPDATED] yt-dlp updated: $OLD_VERSION -> $NEW_VERSION"
     else
-        echo "[OK] yt-dlp version: $NEW_VERSION (latest)"
+        echo "[OK] yt-dlp version: $NEW_VERSION"
     fi
     echo "[OK] yt-dlp-ejs package included for YouTube compatibility"
 else
@@ -127,31 +189,36 @@ echo "Step 4/6: Installing Deno (for YouTube challenges)"
 echo "========================================"
 echo ""
 
-if command -v deno &> /dev/null; then
-    OLD_DENO=$(deno --version | head -n 1)
+DENO_BIN=$(find_tool_path "deno")
+if [ -n "$DENO_BIN" ]; then
+    OLD_DENO=$("$DENO_BIN" --version | head -n 1)
     echo "[OK] Deno currently installed: $OLD_DENO"
     echo "Checking for updates..."
-    if command -v brew &> /dev/null; then
-        brew upgrade deno 2>&1 || true
+    if [ -n "$BREW_BIN" ]; then
+        if ! run_as_invoking_user "$BREW_BIN" upgrade deno 2>&1; then
+            echo "[INFO] Could not auto-upgrade Deno with Homebrew (non-blocking)."
+        fi
     else
-        curl -fsSL https://deno.land/install.sh | sh 2>&1 || true
+        run_as_invoking_user sh -lc "curl -fsSL https://deno.land/install.sh | sh" 2>&1 || true
     fi
-    NEW_DENO=$(deno --version | head -n 1)
+    DENO_BIN=$(find_tool_path "deno")
+    NEW_DENO=$("$DENO_BIN" --version | head -n 1)
     if [ "$OLD_DENO" != "$NEW_DENO" ]; then
         echo "[UPDATED] Deno updated: $OLD_DENO -> $NEW_DENO"
     else
-        echo "[OK] Deno version: $NEW_DENO (latest)"
+        echo "[OK] Deno version: $NEW_DENO"
     fi
 else
     echo "Installing Deno..."
-    if command -v brew &> /dev/null; then
-        brew install deno
+    if [ -n "$BREW_BIN" ]; then
+        run_as_invoking_user "$BREW_BIN" install deno
     else
-        curl -fsSL https://deno.land/install.sh | sh
+        run_as_invoking_user sh -lc "curl -fsSL https://deno.land/install.sh | sh"
         echo "Please add Deno to your PATH manually if not detected."
     fi
     
-    if command -v deno &> /dev/null || [ -f "$HOME/.deno/bin/deno" ]; then
+    DENO_BIN=$(find_tool_path "deno")
+    if [ -n "$DENO_BIN" ] || [ -f "$INVOKING_HOME/.deno/bin/deno" ]; then
         echo "[OK] Deno installed successfully"
     else
         echo "[WARNING] Deno installation may have failed"
@@ -164,7 +231,7 @@ echo "Step 5/6: Checking ffmpeg"
 echo "========================================"
 echo ""
 
-if command -v ffmpeg &> /dev/null; then
+if [ -n "$(find_tool_path "ffmpeg")" ]; then
     echo "[OK] ffmpeg is installed"
 else
     echo "[MISSING] ffmpeg not found"
@@ -245,20 +312,20 @@ echo ""
 CONFIG_FILE="$EXTENSION_PATH/client/js/config.json"
 
 # Find paths
-NODE_PATH=$(which node)
+NODE_PATH=$(find_tool_path "node")
 if [ -z "$NODE_PATH" ]; then echo "  [MISSING] Node.js"; else echo "  [FOUND] Node.js: $NODE_PATH"; fi
 
-PYTHON_PATH=$(which python3)
-[ -z "$PYTHON_PATH" ] && PYTHON_PATH=$(which python)
+PYTHON_PATH=$(find_tool_path "python3")
+[ -z "$PYTHON_PATH" ] && PYTHON_PATH=$(find_tool_path "python")
 if [ -z "$PYTHON_PATH" ]; then echo "  [MISSING] Python"; else echo "  [FOUND] Python: $PYTHON_PATH"; fi
 
-YTDLP_PATH=$(which yt-dlp)
+YTDLP_PATH=$(find_tool_path "yt-dlp")
 if [ -z "$YTDLP_PATH" ]; then echo "  [MISSING] yt-dlp"; else echo "  [FOUND] yt-dlp: $YTDLP_PATH"; fi
 
-FFMPEG_PATH=$(which ffmpeg)
+FFMPEG_PATH=$(find_tool_path "ffmpeg")
 if [ -z "$FFMPEG_PATH" ]; then echo "  [MISSING] ffmpeg"; else echo "  [FOUND] ffmpeg: $FFMPEG_PATH"; fi
 
-DENO_PATH=$(which deno)
+DENO_PATH=$(find_tool_path "deno")
 if [ -z "$DENO_PATH" ]; then echo "  [MISSING] Deno"; else echo "  [FOUND] Deno: $DENO_PATH"; fi
 
 echo ""

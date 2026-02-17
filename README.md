@@ -238,7 +238,12 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Recent Updates
 
-### Version 2.6.1 (Current)
+### Version 2.6.2 (Current)
+- **Fix**: ProRes 422 conversion now correctly reuses the resolved ffmpeg path and no longer falls back to importing the original MP4 after a scope error.
+- **Fix**: macOS installer now runs `pip`/`brew` dependency operations as the invoking user (not root), removing common warnings and avoiding Homebrew root errors.
+- **Fix**: Installer dependency status output is now more accurate when updates fail (non-blocking info instead of misleading "latest").
+
+### Version 2.6.1
 - **Fix**: Installers now properly force-upgrade yt-dlp and Deno to latest versions (was silently skipping updates).
 - **Fix**: Removed `--quiet` flag from pip upgrade to show progress and errors.
 - **New**: `UPDATE_DEPENDENCIES` scripts replace `CHECK_DEPENDENCIES` — force-update all tools with before/after version display.
