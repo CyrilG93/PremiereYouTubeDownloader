@@ -238,7 +238,15 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Recent Updates
 
-### Version 2.6.2 (Current)
+### Version 2.7.0 (Current)
+- **UI**: Reworked "Qualité et Codec" controls with dropdown selectors for video quality, codec, and audio format.
+- **New**: Added estimated download size preview before launching downloads.
+- **UX**: Logs section is more compact when collapsed and logs toggle is fully translated.
+- **i18n**: Added new languages (ES, DE, PT-BR, JA, IT, ZH-CN, RU) and sorted language selector alphabetically.
+- **UI**: App version moved to the main header; update banner now shows the available version number.
+- **Settings**: Cookie browser label now highlights `Firefox (recommended)`.
+
+### Version 2.6.2
 - **Fix**: ProRes 422 conversion now correctly reuses the resolved ffmpeg path and no longer falls back to importing the original MP4 after a scope error.
 - **Fix**: macOS installer now runs `pip`/`brew` dependency operations as the invoking user (not root), removing common warnings and avoiding Homebrew root errors.
 - **Fix**: Installer dependency status output is now more accurate when updates fail (non-blocking info instead of misleading "latest").
