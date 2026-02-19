@@ -21,6 +21,7 @@
                         fill="currentColor" />
                 </svg>
                 <h1>YouTube Downloader</h1>
+                <span id="mainVersionInfo" class="version-badge header-version">v2.6.2</span>
             </div>
             <div class="header-controls">
                 <div class="language-selector" id="languageSelector">
@@ -97,14 +98,25 @@
             </div>
 
             <div class="codec-section" id="codecSection">
-                <label data-i18n="codecLabel">Codec</label>
-                <div class="codec-quick-select">
-                    <button class="codec-quick-btn active" data-codec="h264">
-                        <span>H.264</span>
-                    </button>
-                    <button class="codec-quick-btn" data-codec="prores">
-                        <span>ProRes 422 HQ</span>
-                    </button>
+                <label data-i18n="codecLabel">Qualité et Codec</label>
+                <div class="quality-codec-layout">
+                    <select id="videoQualitySelect" class="codec-select">
+                        <option value="max" data-i18n="qualityMax">Maximal</option>
+                        <option value="144" data-i18n="quality144">144p</option>
+                        <option value="360" data-i18n="quality360">360p</option>
+                        <option value="480" data-i18n="quality480">480p</option>
+                        <option value="720" data-i18n="quality720">720p</option>
+                        <option value="1080" data-i18n="quality1080">1080p</option>
+                        <option value="4k" data-i18n="quality4k">4K</option>
+                    </select>
+                    <select id="codecSelect" class="codec-select">
+                        <option value="h264">H.264</option>
+                        <option value="prores">ProRes 422 HQ</option>
+                    </select>
+                    <select id="audioFormatSelect" class="codec-select">
+                        <option value="wav">WAV</option>
+                        <option value="mp3">MP3</option>
+                    </select>
                 </div>
             </div>
 
@@ -164,6 +176,11 @@
 
             </div>
 
+            <div class="estimate-size" id="estimateSize">
+                <span data-i18n="estimatedSizeLabel">Taille estimée</span>:
+                <span id="estimateSizeValue" data-i18n="estimatedSizeUnknownValue">--</span>
+            </div>
+
             <div class="button-group">
                 <button class="download-btn" id="downloadBtn">
                     <svg class="download-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -206,11 +223,10 @@
         </main>
 
         <!-- Settings Panel -->
-        <div class="settings-panel" id="settingsPanel">
-            <div class="settings-header">
-                <h2 data-i18n="settings">Settings</h2>
-                <span id="versionInfo" class="version-badge">v2.5.9</span>
-                <button class="close-btn" id="closeSettingsBtn">
+            <div class="settings-panel" id="settingsPanel">
+                <div class="settings-header">
+                    <h2 data-i18n="settings">Settings</h2>
+                    <button class="close-btn" id="closeSettingsBtn">
                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                             stroke-linejoin="round" />
@@ -274,7 +290,7 @@
                 <div class="setting-item">
                     <label for="cookieBrowser" data-i18n="cookieBrowserLabel">Browser for Cookies</label>
                     <select id="cookieBrowser">
-                        <option value="firefox">Firefox (Default)</option>
+                        <option value="firefox" data-i18n="firefoxRecommended">Firefox (recommended)</option>
                         <option value="chrome">Google Chrome</option>
                         <option value="brave">Brave</option>
                         <option value="edge">Microsoft Edge</option>

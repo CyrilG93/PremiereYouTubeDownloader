@@ -11,6 +11,8 @@ async function downloadVideo(options) {
         url,
         format = 'both',
         codec = 'h264',
+        videoQuality = 'max',
+        audioFormat = 'wav',
         destination,
         startTime,
         endTime,
@@ -49,7 +51,17 @@ async function downloadVideo(options) {
             // Priority: 1. Settings (UI) 2. AutoConfig (JSON) 3. Logic detection 4. PATH
             const effectiveFfmpegPath = customFfmpegPath || autoConfig.ffmpegPath || null;
             const effectiveCookieBrowser = cookieBrowser || 'firefox';
-            const args = buildYtDlpArgs(url, format, destination, startTime, endTime, effectiveFfmpegPath, effectiveCookieBrowser);
+            const args = buildYtDlpArgs(
+                url,
+                format,
+                destination,
+                startTime,
+                endTime,
+                effectiveFfmpegPath,
+                effectiveCookieBrowser,
+                videoQuality,
+                audioFormat
+            );
 
             // Determine yt-dlp executable path
             let ytDlpPath = customYtdlpPath || autoConfig.ytDlpPath || null;
@@ -311,7 +323,7 @@ async function downloadVideo(options) {
 /**
  * Build yt-dlp command arguments
  */
-function buildYtDlpArgs(url, format, destination, startTime, endTime, customFfmpegPath, cookieBrowser = 'firefox') {
+function buildYtDlpArgs(url, format, destination, startTime, endTime, customFfmpegPath, cookieBrowser = 'firefox', videoQuality = 'max', audioFormat = 'wav') {
     const args = [url];
 
     // Determine ffmpeg path for yt-dlp post-processing
@@ -365,16 +377,9 @@ function buildYtDlpArgs(url, format, destination, startTime, endTime, customFfmp
     if (format === 'audio') {
         args.push('-f', 'bestaudio/best');
         args.push('-x');
-        args.push('--audio-format', 'wav');
+        args.push('--audio-format', normalizeAudioFormat(audioFormat));
     } else {
-        // Video - EXCLUDE VP9 codec (not supported by Premiere Pro)
-        // Prefer H.264/AVC which is universally supported
-        // Format string explanation:
-        // - bestvideo[vcodec^=avc1] : Try H.264 (avc1) first
-        // - bestvideo[vcodec^=avc]  : Try any AVC variant
-        // - bestvideo[vcodec!=vp9]  : Try any codec EXCEPT VP9
-        // - best                    : Fallback to best available
-        args.push('-f', 'bestvideo[vcodec^=avc1]+bestaudio/bestvideo[vcodec^=avc]+bestaudio/bestvideo[vcodec!=vp9]+bestaudio/best');
+        args.push('-f', getVideoFormatSelector(videoQuality));
         args.push('--merge-output-format', 'mp4');
 
         // Force audio to AAC codec (Premiere Pro doesn't support Opus/Vorbis)
@@ -431,6 +436,36 @@ function buildYtDlpArgs(url, format, destination, startTime, endTime, customFfmp
     }
 
     return args;
+}
+
+function normalizeAudioFormat(audioFormat) {
+    return audioFormat === 'mp3' ? 'mp3' : 'wav';
+}
+
+function normalizeVideoQuality(videoQuality) {
+    const quality = String(videoQuality || 'max').toLowerCase();
+    const allowed = new Set(['max', '144', '360', '480', '720', '1080', '4k']);
+    return allowed.has(quality) ? quality : 'max';
+}
+
+function getVideoFormatSelector(videoQuality = 'max') {
+    const normalizedQuality = normalizeVideoQuality(videoQuality);
+    const maxHeightByQuality = {
+        '144': 144,
+        '360': 360,
+        '480': 480,
+        '720': 720,
+        '1080': 1080,
+        '4k': 2160
+    };
+
+    const maxHeight = maxHeightByQuality[normalizedQuality];
+
+    if (!maxHeight) {
+        return 'bestvideo[vcodec^=avc1]+bestaudio/bestvideo[vcodec^=avc]+bestaudio/bestvideo[vcodec!=vp9]+bestaudio/best';
+    }
+
+    return `bestvideo[vcodec^=avc1][height<=${maxHeight}]+bestaudio/bestvideo[vcodec^=avc][height<=${maxHeight}]+bestaudio/bestvideo[vcodec!=vp9][height<=${maxHeight}]+bestaudio/best[height<=${maxHeight}]`;
 }
 
 /**
@@ -646,6 +681,262 @@ function normalizeFfmpegExecutablePath(ffmpegPath) {
 }
 
 /**
+ * Estimate download size without downloading the file.
+ */
+async function estimateDownloadSize(options) {
+    const {
+        url,
+        format = 'both',
+        videoQuality = 'max',
+        audioFormat = 'wav',
+        startTime,
+        endTime,
+        customYtdlpPath,
+        customFfmpegPath,
+        customDenoPath,
+        cookieBrowser = 'firefox'
+    } = options || {};
+
+    let autoConfig = {};
+    try {
+        const configPath = path.join(__dirname, 'config.json');
+        if (fs.existsSync(configPath)) {
+            const configFile = fs.readFileSync(configPath, 'utf8');
+            autoConfig = JSON.parse(configFile);
+        }
+    } catch (e) {
+        console.error('Error loading config.json for size estimate:', e);
+    }
+
+    return new Promise((resolve, reject) => {
+        try {
+            const effectiveFfmpegPath = customFfmpegPath || autoConfig.ffmpegPath || null;
+
+            let ytDlpPath = customYtdlpPath || autoConfig.ytDlpPath || null;
+            if (!ytDlpPath && os.platform() === 'win32') {
+                const userHome = os.homedir();
+                const winPaths = [
+                    path.join(userHome, 'AppData', 'Local', 'Programs', 'Python', 'Python314', 'Scripts', 'yt-dlp.exe'),
+                    path.join(userHome, 'AppData', 'Local', 'Programs', 'Python', 'Python313', 'Scripts', 'yt-dlp.exe'),
+                    path.join(userHome, 'AppData', 'Local', 'Programs', 'Python', 'Python312', 'Scripts', 'yt-dlp.exe'),
+                    path.join(userHome, 'AppData', 'Local', 'Programs', 'Python', 'Python311', 'Scripts', 'yt-dlp.exe'),
+                    path.join(userHome, 'AppData', 'Roaming', 'Python', 'Python314', 'Scripts', 'yt-dlp.exe'),
+                    path.join(userHome, 'AppData', 'Roaming', 'Python', 'Python313', 'Scripts', 'yt-dlp.exe'),
+                    path.join(userHome, 'AppData', 'Roaming', 'Python', 'Python312', 'Scripts', 'yt-dlp.exe'),
+                    path.join(userHome, 'AppData', 'Roaming', 'Python', 'Python311', 'Scripts', 'yt-dlp.exe'),
+                    'C:\\Python314\\Scripts\\yt-dlp.exe',
+                    'C:\\Python313\\Scripts\\yt-dlp.exe',
+                    'C:\\Python312\\Scripts\\yt-dlp.exe',
+                    'C:\\Python311\\Scripts\\yt-dlp.exe',
+                ];
+                for (const p of winPaths) {
+                    if (fs.existsSync(p)) {
+                        ytDlpPath = p;
+                        break;
+                    }
+                }
+            } else if (!ytDlpPath && os.platform() === 'darwin') {
+                const macPaths = [
+                    '/opt/homebrew/bin/yt-dlp',
+                    '/usr/local/bin/yt-dlp',
+                    '/usr/bin/yt-dlp'
+                ];
+                for (const p of macPaths) {
+                    if (fs.existsSync(p)) {
+                        ytDlpPath = p;
+                        break;
+                    }
+                }
+            }
+
+            if (!ytDlpPath) {
+                ytDlpPath = 'yt-dlp';
+            }
+
+            const customEnv = { ...process.env };
+            if (os.platform() === 'win32') {
+                const userHome = os.homedir();
+                const additionalPaths = [
+                    customDenoPath ? path.dirname(customDenoPath) : null,
+                    path.join(userHome, '.deno', 'bin'),
+                    path.join(userHome, 'AppData', 'Local', 'Microsoft', 'WindowsApps'),
+                    path.join(userHome, 'multi-downloader-nx'),
+                    'C:\\Program Files\\ffmpeg\\bin',
+                    'C:\\ffmpeg\\bin',
+                ].filter(p => p && fs.existsSync(p));
+                if (autoConfig.denoPath) additionalPaths.push(path.dirname(autoConfig.denoPath));
+                if (autoConfig.nodePath) additionalPaths.push(path.dirname(autoConfig.nodePath));
+                if (autoConfig.pythonPath) additionalPaths.push(path.dirname(autoConfig.pythonPath));
+                if (additionalPaths.length > 0) {
+                    customEnv.PATH = additionalPaths.join(';') + ';' + (customEnv.PATH || '');
+                }
+            } else if (os.platform() === 'darwin' || os.platform() === 'linux') {
+                const userHome = os.homedir();
+                const additionalPaths = [
+                    '/opt/homebrew/bin',
+                    '/usr/local/bin',
+                    path.join(userHome, '.deno', 'bin'),
+                    '/usr/bin',
+                    '/bin',
+                    '/usr/sbin',
+                    '/sbin'
+                ].filter(p => p && fs.existsSync(p));
+                if (additionalPaths.length > 0) {
+                    customEnv.PATH = additionalPaths.join(':') + ':' + (customEnv.PATH || '');
+                }
+            }
+
+            const args = [url];
+            let ffmpegPath = effectiveFfmpegPath || null;
+            if (!ffmpegPath) ffmpegPath = 'ffmpeg';
+            ffmpegPath = normalizeFfmpegExecutablePath(ffmpegPath);
+
+            const ffmpegLocation = path.dirname(ffmpegPath);
+            if (ffmpegLocation && ffmpegLocation !== '.') {
+                args.push('--ffmpeg-location', ffmpegLocation);
+            }
+
+            if (format === 'audio') {
+                args.push('-f', 'bestaudio/best');
+                args.push('-x');
+                args.push('--audio-format', normalizeAudioFormat(audioFormat));
+            } else {
+                args.push('-f', getVideoFormatSelector(videoQuality));
+                args.push('--merge-output-format', 'mp4');
+            }
+
+            args.push('--dump-single-json');
+            args.push('--skip-download');
+            args.push('--no-playlist');
+            args.push('--cookies-from-browser', cookieBrowser || 'firefox');
+            args.push('--ignore-errors');
+            args.push('--no-check-certificate');
+
+            if (startTime !== undefined && endTime !== undefined) {
+                const formatTime = (seconds) => {
+                    const h = Math.floor(seconds / 3600);
+                    const m = Math.floor((seconds % 3600) / 60);
+                    const s = seconds % 60;
+                    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                };
+                args.push('--download-sections', `*${formatTime(startTime)}-${formatTime(endTime)}`);
+            }
+
+            const ytDlp = spawn(ytDlpPath, args, {
+                windowsHide: true,
+                shell: false,
+                env: customEnv
+            });
+
+            let stdoutBuffer = '';
+            let stderrBuffer = '';
+
+            ytDlp.stdout.on('data', (data) => {
+                stdoutBuffer += data.toString();
+            });
+
+            ytDlp.stderr.on('data', (data) => {
+                stderrBuffer += data.toString();
+            });
+
+            ytDlp.on('close', (code) => {
+                if (code !== 0) {
+                    reject(new Error(`yt-dlp estimate exited with code ${code}. ${stderrBuffer}`));
+                    return;
+                }
+
+                const info = parseYtDlpJson(stdoutBuffer);
+                if (!info) {
+                    resolve({ bytes: null });
+                    return;
+                }
+
+                let estimatedBytes = extractEstimatedBytes(info);
+                if (estimatedBytes && Number.isFinite(info.duration) && startTime !== undefined && endTime !== undefined && endTime > startTime) {
+                    const clippedDuration = Math.max(0, Math.min(info.duration, endTime) - Math.max(0, startTime));
+                    if (clippedDuration > 0 && info.duration > 0) {
+                        estimatedBytes = Math.round(estimatedBytes * (clippedDuration / info.duration));
+                    }
+                }
+
+                resolve({
+                    bytes: estimatedBytes || null,
+                    duration: Number.isFinite(info.duration) ? info.duration : null
+                });
+            });
+
+            ytDlp.on('error', (err) => {
+                reject(err);
+            });
+        } catch (error) {
+            reject(error);
+        }
+    });
+}
+
+function parseYtDlpJson(stdoutBuffer) {
+    const trimmed = (stdoutBuffer || '').trim();
+    if (!trimmed) return null;
+
+    try {
+        return JSON.parse(trimmed);
+    } catch (e) {
+        // Continue with fallback parsing
+    }
+
+    const lines = trimmed.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+    for (let i = lines.length - 1; i >= 0; i--) {
+        if (!lines[i].startsWith('{')) continue;
+        try {
+            return JSON.parse(lines[i]);
+        } catch (e) {
+            // Continue
+        }
+    }
+
+    const firstBrace = trimmed.indexOf('{');
+    const lastBrace = trimmed.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace > firstBrace) {
+        try {
+            return JSON.parse(trimmed.slice(firstBrace, lastBrace + 1));
+        } catch (e) {
+            return null;
+        }
+    }
+
+    return null;
+}
+
+function extractEstimatedBytes(info) {
+    const duration = Number(info.duration);
+
+    const getItemSize = (item) => {
+        if (!item || typeof item !== 'object') return 0;
+        const directSize = Number(item.filesize) || Number(item.filesize_approx) || 0;
+        if (directSize > 0) return directSize;
+        const bitrate = Number(item.tbr);
+        if (duration > 0 && bitrate > 0) {
+            return Math.round((duration * bitrate * 1000) / 8);
+        }
+        return 0;
+    };
+
+    const sumArraySizes = (arr) => {
+        if (!Array.isArray(arr) || arr.length === 0) return 0;
+        return arr.reduce((sum, item) => sum + getItemSize(item), 0);
+    };
+
+    let bytes = sumArraySizes(info.requested_downloads);
+    if (bytes > 0) return bytes;
+
+    bytes = sumArraySizes(info.requested_formats);
+    if (bytes > 0) return bytes;
+
+    bytes = getItemSize(info);
+    return bytes > 0 ? bytes : null;
+}
+
+/**
  * Find the latest file in a directory
  */
 function findLatestFile(directory) {
@@ -693,5 +984,6 @@ function findLatestFile(directory) {
 }
 
 module.exports = {
-    downloadVideo
+    downloadVideo,
+    estimateDownloadSize
 };

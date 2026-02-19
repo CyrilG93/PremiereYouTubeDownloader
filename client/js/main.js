@@ -75,7 +75,16 @@ if (toggleLogsBtn) {
     toggleLogsBtn.addEventListener('click', () => {
         logsContainer.classList.toggle('active');
         toggleLogsBtn.classList.toggle('active');
+        updateLogsToggleLabel();
     });
+}
+
+function updateLogsToggleLabel() {
+    if (!toggleLogsBtn) return;
+    const label = toggleLogsBtn.querySelector('span');
+    if (!label) return;
+    const key = logsContainer && logsContainer.classList.contains('active') ? 'hideLogs' : 'showLogs';
+    label.textContent = i18n.get(key);
 }
 
 // --- DOM ELEMENTS ---
@@ -107,16 +116,26 @@ const folderPreset3Input = document.getElementById('folderPreset3');
 const customYtdlpPathInput = document.getElementById('customYtdlpPath');
 const customFfmpegPathInput = document.getElementById('customFfmpegPath');
 const customDenoPathInput = document.getElementById('customDenoPath');
-const codecQuickBtns = document.querySelectorAll('.codec-quick-btn');
-const codecSection = document.getElementById('codecSection');
+const codecSelect = document.getElementById('codecSelect');
+const videoQualitySelect = document.getElementById('videoQualitySelect');
+const audioFormatSelect = document.getElementById('audioFormatSelect');
+const estimateSize = document.getElementById('estimateSize');
+const estimateSizeValue = document.getElementById('estimateSizeValue');
 const folderDepthInput = document.getElementById('folderDepth');
 
 // --- STATE ---
 let selectedFormat = 'both';
 let selectedFolderSlot = '1';
 let selectedCodec = 'h264';
+let selectedVideoQuality = 'max';
+let selectedAudioFormat = 'wav';
 let isDownloading = false;
 let downloadAbortController = null;
+let sizeEstimateState = 'idle';
+let lastEstimatedBytes = null;
+let estimateDebounceTimer = null;
+let estimateRequestId = 0;
+let availableUpdateVersion = null;
 
 // --- SETTINGS STORAGE HELPERS ---
 function getSettingsDir() {
@@ -258,7 +277,18 @@ function updateQuickFolderVisuals(settings) {
             btn.classList.toggle('active', btn.dataset.format === selectedFormat);
         });
         document.getElementById('defaultFormat').value = selectedFormat;
+    } else {
+        formatBtns.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.format === selectedFormat);
+        });
     }
+
+    selectedVideoQuality = settings.videoQuality || 'max';
+    selectedCodec = settings.codec || 'h264';
+    selectedAudioFormat = settings.audioFormat || 'wav';
+    if (videoQualitySelect) videoQualitySelect.value = selectedVideoQuality;
+    if (codecSelect) codecSelect.value = selectedCodec;
+    if (audioFormatSelect) audioFormatSelect.value = selectedAudioFormat;
 
     if (settings.autoImport !== undefined) {
         document.getElementById('autoImport').checked = settings.autoImport;
@@ -278,6 +308,10 @@ function updateQuickFolderVisuals(settings) {
     if (settings.cookieBrowser && document.getElementById('cookieBrowser')) {
         document.getElementById('cookieBrowser').value = settings.cookieBrowser;
     }
+
+    updateQualityControlsState();
+    renderEstimatedSize();
+    queueEstimatedSizeUpdate();
 }
 
 function saveSettings() {
@@ -295,7 +329,10 @@ function saveSettings() {
         customFfmpegPath: customFfmpegPathInput ? customFfmpegPathInput.value.trim() : '',
         customDenoPath: customDenoPathInput ? customDenoPathInput.value.trim() : '',
         folderDepth: folderDepthInput ? parseInt(folderDepthInput.value, 10) : 0,
-        cookieBrowser: document.getElementById('cookieBrowser') ? document.getElementById('cookieBrowser').value : 'firefox'
+        cookieBrowser: document.getElementById('cookieBrowser') ? document.getElementById('cookieBrowser').value : 'firefox',
+        videoQuality: selectedVideoQuality,
+        codec: selectedCodec,
+        audioFormat: selectedAudioFormat
     };
 
     // Save to persistent file
@@ -319,6 +356,7 @@ function saveSettings() {
 clearBtn.addEventListener('click', () => {
     urlInput.value = '';
     urlInput.focus();
+    queueEstimatedSizeUpdate();
 });
 
 formatBtns.forEach(btn => {
@@ -326,21 +364,40 @@ formatBtns.forEach(btn => {
         formatBtns.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         selectedFormat = btn.dataset.format;
-        // Disable codec section for audio-only downloads
-        if (codecSection) {
-            codecSection.classList.toggle('disabled', selectedFormat === 'audio');
-        }
+        updateQualityControlsState();
+        queueEstimatedSizeUpdate();
     });
 });
 
-// Codec quick select buttons
-codecQuickBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-        codecQuickBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        selectedCodec = btn.dataset.codec;
+if (codecSelect) {
+    codecSelect.addEventListener('change', () => {
+        selectedCodec = codecSelect.value === 'prores' ? 'prores' : 'h264';
+        persistQuickOptions();
+        queueEstimatedSizeUpdate();
     });
-});
+}
+
+if (videoQualitySelect) {
+    videoQualitySelect.addEventListener('change', () => {
+        selectedVideoQuality = videoQualitySelect.value || 'max';
+        persistQuickOptions();
+        queueEstimatedSizeUpdate();
+    });
+}
+
+if (audioFormatSelect) {
+    audioFormatSelect.addEventListener('change', () => {
+        selectedAudioFormat = audioFormatSelect.value === 'mp3' ? 'mp3' : 'wav';
+        persistQuickOptions();
+        queueEstimatedSizeUpdate();
+    });
+}
+
+urlInput.addEventListener('input', queueEstimatedSizeUpdate);
+startTime.addEventListener('input', queueEstimatedSizeUpdate);
+endTime.addEventListener('input', queueEstimatedSizeUpdate);
+startTime.addEventListener('blur', queueEstimatedSizeUpdate);
+endTime.addEventListener('blur', queueEstimatedSizeUpdate);
 
 enableTimeRange.addEventListener('change', () => {
     if (enableTimeRange.checked) {
@@ -350,6 +407,7 @@ enableTimeRange.addEventListener('change', () => {
         timeInputs.style.opacity = '0.5';
         timeInputs.style.pointerEvents = 'none';
     }
+    queueEstimatedSizeUpdate();
 });
 
 browseBtn.addEventListener('click', () => {
@@ -436,6 +494,139 @@ function updateProgress(percent, text) {
     progressPercent.textContent = `${Math.round(percent)}%`;
     if (text) {
         progressText.textContent = text;
+    }
+}
+
+function updateQualityControlsState() {
+    const isAudioOnly = selectedFormat === 'audio';
+
+    if (videoQualitySelect) {
+        videoQualitySelect.disabled = isAudioOnly;
+    }
+    if (codecSelect) {
+        codecSelect.disabled = isAudioOnly;
+    }
+    if (audioFormatSelect) {
+        audioFormatSelect.disabled = !isAudioOnly;
+    }
+}
+
+function formatBytes(bytes) {
+    if (!Number.isFinite(bytes) || bytes <= 0) return '--';
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    let value = bytes;
+    let unitIndex = 0;
+    while (value >= 1024 && unitIndex < units.length - 1) {
+        value /= 1024;
+        unitIndex += 1;
+    }
+    const decimals = value >= 100 || unitIndex === 0 ? 0 : value >= 10 ? 1 : 2;
+    return `${value.toFixed(decimals)} ${units[unitIndex]}`;
+}
+
+function renderEstimatedSize() {
+    if (!estimateSize || !estimateSizeValue) return;
+
+    estimateSize.classList.remove('ready', 'loading', 'unavailable');
+
+    if (sizeEstimateState === 'loading') {
+        estimateSize.classList.add('loading');
+        estimateSizeValue.textContent = i18n.get('estimatedSizeLoading');
+        return;
+    }
+
+    if (sizeEstimateState === 'ready' && Number.isFinite(lastEstimatedBytes) && lastEstimatedBytes > 0) {
+        estimateSize.classList.add('ready');
+        estimateSizeValue.textContent = `~ ${formatBytes(lastEstimatedBytes)}`;
+        return;
+    }
+
+    if (sizeEstimateState === 'unavailable') {
+        estimateSize.classList.add('unavailable');
+        estimateSizeValue.textContent = i18n.get('estimatedSizeUnavailable');
+        return;
+    }
+
+    estimateSizeValue.textContent = i18n.get('estimatedSizeUnknownValue');
+}
+
+function setEstimatedSizeState(state, bytes = null) {
+    sizeEstimateState = state;
+    lastEstimatedBytes = bytes;
+    renderEstimatedSize();
+}
+
+function persistQuickOptions() {
+    const settings = readSettingsFromFile() || {};
+    settings.videoQuality = selectedVideoQuality;
+    settings.codec = selectedCodec;
+    settings.audioFormat = selectedAudioFormat;
+    writeSettingsToFile(settings);
+    localStorage.setItem('ytDownloaderSettings', JSON.stringify(settings));
+}
+
+function queueEstimatedSizeUpdate() {
+    if (estimateDebounceTimer) {
+        clearTimeout(estimateDebounceTimer);
+    }
+    estimateDebounceTimer = setTimeout(() => {
+        updateEstimatedSize();
+    }, 450);
+}
+
+async function updateEstimatedSize() {
+    const requestId = ++estimateRequestId;
+
+    if (!downloader || typeof downloader.estimateDownloadSize !== 'function') {
+        setEstimatedSizeState('unavailable');
+        return;
+    }
+
+    if (isDownloading) return;
+
+    const url = (urlInput.value || '').trim();
+    if (!url || !isValidYouTubeUrl(url)) {
+        setEstimatedSizeState('idle');
+        return;
+    }
+
+    setEstimatedSizeState('loading');
+
+    try {
+        const settings = readSettingsFromFile() || {};
+        const estimateOptions = {
+            url,
+            format: selectedFormat,
+            codec: selectedFormat === 'audio' ? 'h264' : selectedCodec,
+            videoQuality: selectedVideoQuality,
+            audioFormat: selectedAudioFormat,
+            customYtdlpPath: settings.customYtdlpPath || null,
+            customFfmpegPath: settings.customFfmpegPath || null,
+            customDenoPath: settings.customDenoPath || null,
+            cookieBrowser: settings.cookieBrowser || 'firefox'
+        };
+
+        if (enableTimeRange.checked) {
+            const start = parseTime(startTime.value);
+            const end = parseTime(endTime.value);
+            if (start !== null && end !== null && end > start) {
+                estimateOptions.startTime = start;
+                estimateOptions.endTime = end;
+            }
+        }
+
+        const estimate = await downloader.estimateDownloadSize(estimateOptions);
+        if (requestId !== estimateRequestId) return;
+
+        if (estimate && Number.isFinite(estimate.bytes) && estimate.bytes > 0) {
+            setEstimatedSizeState('ready', estimate.bytes);
+        } else {
+            setEstimatedSizeState('unavailable');
+        }
+    } catch (error) {
+        if (requestId !== estimateRequestId) return;
+        console.error('Size estimate error:', error);
+        setEstimatedSizeState('unavailable');
     }
 }
 
@@ -570,6 +761,8 @@ async function downloadVideo() {
                 url: url,
                 format: selectedFormat,
                 codec: selectedFormat === 'audio' ? 'h264' : selectedCodec,
+                videoQuality: selectedVideoQuality,
+                audioFormat: selectedAudioFormat,
                 destination: destinationPath,
                 signal: downloadAbortController.signal,
                 // Custom tool paths from settings
@@ -719,6 +912,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize i18n first
     i18n.init();
     initLanguageDropdown();
+    updateLogsToggleLabel();
+    renderEstimatedSize();
 
     loadSettings();
     checkForUpdates();
@@ -778,8 +973,8 @@ async function checkForUpdates() {
     const localVersion = getAppVersion();
     console.log('[Update] Local version:', localVersion);
 
-    // Update settings badge
-    const versionBadge = document.getElementById('versionInfo');
+    // Update header version badge
+    const versionBadge = document.getElementById('mainVersionInfo');
     if (versionBadge) {
         versionBadge.textContent = 'v' + localVersion;
     }
@@ -814,9 +1009,14 @@ async function checkForUpdates() {
                             const zipAsset = release.assets.find(asset => asset.name.endsWith('.zip'));
                             const downloadUrl = zipAsset ? zipAsset.browser_download_url : release.html_url;
 
-                            showUpdateBanner(downloadUrl);
+                            showUpdateBanner(downloadUrl, latestVersion);
                         } else {
                             console.log('[Update] App is up to date.');
+                            availableUpdateVersion = null;
+                            const banner = document.getElementById('updateBanner');
+                            if (banner) {
+                                banner.style.display = 'none';
+                            }
                         }
                     } else {
                         console.error('[Update] GitHub API error:', res.statusCode);
@@ -841,9 +1041,17 @@ async function checkForUpdates() {
 /**
  * Show update banner
  */
-function showUpdateBanner(downloadUrl) {
+function refreshUpdateBannerText() {
+    const banner = document.getElementById('updateBanner');
+    if (!banner || !availableUpdateVersion) return;
+    banner.textContent = `${i18n.get('updateAvailable')} (v${availableUpdateVersion})`;
+}
+
+function showUpdateBanner(downloadUrl, latestVersion) {
     const banner = document.getElementById('updateBanner');
     if (banner) {
+        availableUpdateVersion = latestVersion || null;
+        refreshUpdateBannerText();
         banner.style.display = 'block';
         banner.onclick = function () {
             if (downloadUrl) {
@@ -875,7 +1083,14 @@ function initLanguageDropdown() {
     const languages = i18n.getLanguages();
     languageDropdown.innerHTML = '';
 
-    Object.entries(languages).forEach(([code, lang]) => {
+    const sortedLanguages = Object.entries(languages)
+        .sort((a, b) => {
+            const nameA = (a[1] && a[1].name) ? a[1].name : '';
+            const nameB = (b[1] && b[1].name) ? b[1].name : '';
+            return nameA.localeCompare(nameB, 'en', { sensitivity: 'base' });
+        });
+
+    sortedLanguages.forEach(([code, lang]) => {
         const btn = document.createElement('button');
         btn.setAttribute('data-lang', code);
         btn.textContent = `${lang.flag} ${lang.name}`;
@@ -886,6 +1101,9 @@ function initLanguageDropdown() {
             i18n.setLanguage(code);
             // Restore custom folder preset names after language change
             loadSettings();
+            updateLogsToggleLabel();
+            renderEstimatedSize();
+            refreshUpdateBannerText();
             // Update active state
             languageDropdown.querySelectorAll('button').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
