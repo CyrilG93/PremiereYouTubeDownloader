@@ -4,6 +4,25 @@ Download YouTube videos directly into your Adobe Premiere Pro project.
 
 ---
 
+## ✨ Features
+
+- ✅ Download YouTube videos directly into Premiere Pro
+- ✅ **Codec Selection**: Choose between H.264 (MP4) or ProRes 422 HQ (MOV)
+- ✅ **YouTube Shorts Support**: Download Shorts with their original URLs
+- ✅ **Unicode Filenames**: Support for Japanese, Chinese, Korean, and other non-Latin characters
+- ✅ **Folder Quick-Select**: 4 preset destination buttons for fast switching
+- ✅ Automatic H.264 video codec (Premiere Pro compatible)
+- ✅ Automatic AAC audio conversion (no more silent videos!)
+- ✅ Choose output format: MP3, WAV, or FLAC
+- ✅ Time range selection (download specific sections)*
+- ✅ Auto-import into project bins
+- ✅ Relative or absolute path support
+- ✅ Multi-language support (English/French)
+
+*> **Note**: Time range downloads are slower than full downloads. This is a YouTube limitation—the video must be streamed and processed in near real-time rather than downloaded directly.
+
+---
+
 ## 📋 Requirements
 
 This extension needs the following tools installed on your computer:
@@ -107,26 +126,6 @@ Run in Terminal:
 4. Select format (Video/Audio/Both)
 5. Click **Download**
 6. Video automatically imports into your project!
-
----
-
-## ✨ Features
-
-- ✅ Download YouTube videos directly into Premiere Pro
-- ✅ **Codec Selection**: Choose between H.264 (MP4) or ProRes 422 HQ (MOV)
-- ✅ **YouTube Shorts Support**: Download Shorts with their original URLs
-- ✅ **Unicode Filenames**: Support for Japanese, Chinese, Korean, and other non-Latin characters
-- ✅ **Folder Quick-Select**: 4 preset destination buttons for fast switching
-- ✅ Automatic H.264 video codec (Premiere Pro compatible)
-- ✅ Automatic AAC audio conversion (no more silent videos!)
-- ✅ Choose output format: MP3, WAV, or FLAC
-- ✅ Time range selection (download specific sections)*
-- ✅ Auto-import into project bins
-- ✅ Relative or absolute path support
-- ✅ Multi-language support (English/French)
-
-*> **Note**: Time range downloads are slower than full downloads. This is a YouTube limitation—the video must be streamed and processed in near real-time rather than downloaded directly.
----
 
 ---
 
@@ -292,9 +291,7 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 - **Improved**: Safer validaton of active sequence after import.
 - **Fixed**: Removed development config file that caused path issues on Windows.
 
-
-
-### Version 2.5.0 (Huge Update!) 🚀
+### Version 2.5.1
 - **Improved**: Safer validaton of active sequence after import.
 - **Fixed**: Removed development config file that caused path issues on Windows.
 
@@ -375,3 +372,4 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 ---
 
 **Enjoy downloading YouTube videos directly into Premiere Pro! 🎥✨**
+
