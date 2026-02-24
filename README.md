@@ -73,8 +73,12 @@ This extension needs the following tools installed on your computer:
    ```
 
 **2. Install the Extension**:
-   Open Terminal, navigate to the folder and run:
+   Open Terminal.
+   - **Easiest method (recommended):** drag and drop `INSTALL_MACOS.sh` into the Terminal window, then press Enter (sudo will be requested by the script).
+   - **Manual method (command line):** navigate to the extracted folder and run:
    ```bash
+   cd /path/to/PremiereYouTubeDownloader
+   chmod +x INSTALL_MACOS.sh
    sudo ./INSTALL_MACOS.sh
    ```
    - The script will install the extension AND automatically configure all tools.
