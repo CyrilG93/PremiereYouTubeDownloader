@@ -749,7 +749,9 @@ function convertToH264(inputFile, ffmpegPath, onProgress, callback) {
     const ext = path.extname(inputFile);
     const basename = path.basename(inputFile, ext);
     const dirname = path.dirname(inputFile);
-    const outputFile = path.join(dirname, `${basename}.h264-converting.mp4`);
+    const outputPaths = getH264OutputPaths(dirname, basename);
+    const outputFile = outputPaths.temporary;
+    const finalFile = outputPaths.final;
     let conversionFinished = false;
 
     // Complete the asynchronous conversion exactly once across close and error events.
@@ -800,13 +802,18 @@ function convertToH264(inputFile, ffmpegPath, onProgress, callback) {
         }
 
         try {
-            // The converted file is complete before the original download is replaced.
-            fs.unlinkSync(inputFile);
-            fs.renameSync(outputFile, inputFile);
-            console.log(`H.264 conversion successful: ${inputFile}`);
-            finishConversion(inputFile, null);
+            // Use a distinct final path so Premiere never reuses the VP9 source's audio-only cache entry.
+            fs.renameSync(outputFile, finalFile);
+            try {
+                fs.unlinkSync(inputFile);
+                console.log(`Deleted VP9/AV1 source after H.264 conversion: ${inputFile}`);
+            } catch (deleteError) {
+                console.warn('Unable to delete the original source after H.264 conversion:', deleteError.message);
+            }
+            console.log(`H.264 conversion successful: ${finalFile}`);
+            finishConversion(finalFile, null);
         } catch (error) {
-            console.error('Unable to replace source with H.264 output:', error);
+            console.error('Unable to finalize H.264 output:', error);
             finishConversion(outputFile, null);
         }
     });
@@ -814,6 +821,26 @@ function convertToH264(inputFile, ffmpegPath, onProgress, callback) {
     ffmpeg.on('error', (error) => {
         finishConversion(null, new Error(`Unable to start H.264 conversion: ${error.message}`));
     });
+}
+
+/**
+ * Build non-conflicting temporary and final H.264 paths for reliable Premiere imports.
+ */
+function getH264OutputPaths(directory, basename) {
+    let counter = 1;
+    let finalFile = path.join(directory, `${basename} [H264].mp4`);
+
+    // Preserve an earlier conversion by adding a numeric suffix instead of overwriting it.
+    while (fs.existsSync(finalFile)) {
+        counter += 1;
+        finalFile = path.join(directory, `${basename} [H264] ${counter}.mp4`);
+    }
+
+    const finalBasename = path.basename(finalFile, path.extname(finalFile));
+    return {
+        temporary: path.join(directory, `${finalBasename}.converting.mp4`),
+        final: finalFile
+    };
 }
 
 /**
@@ -1163,5 +1190,6 @@ module.exports = {
     estimateDownloadSize,
     // Exported for focused regression tests without exposing these helpers in the panel UI.
     getVideoFormatSelector,
-    normalizeVideoQuality
+    normalizeVideoQuality,
+    getH264OutputPaths
 };
