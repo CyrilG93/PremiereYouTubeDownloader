@@ -12,6 +12,7 @@ Download YouTube videos directly into your Adobe Premiere Pro project.
 - ✅ **Unicode Filenames**: Support for Japanese, Chinese, Korean, and other non-Latin characters
 - ✅ **Folder Quick-Select**: 4 preset destination buttons for fast switching
 - ✅ Automatic H.264 video codec (Premiere Pro compatible)
+- ✅ Maximum and 4K quality use YouTube's best available source, then convert to H.264 when needed
 - ✅ Automatic AAC audio conversion (no more silent videos!)
 - ✅ Choose output format: MP3, WAV, or FLAC
 - ✅ Time range selection (download specific sections)*
@@ -128,8 +129,11 @@ Run in Terminal:
 2. Go to **Window** → **Extensions** → **YouTube Downloader**
 3. Paste a YouTube URL
 4. Select format (Video/Audio/Both)
-5. Click **Download**
-6. Video automatically imports into your project!
+5. Select the quality and delivery codec
+6. Click **Download**
+7. Video automatically imports into your project!
+
+> **4K note:** YouTube commonly provides 1440p and 4K only as VP9 or AV1. When H.264 is selected, the extension downloads that high-quality source and converts it with ffmpeg, so finalization can take longer.
 
 ---
 
@@ -241,7 +245,7 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Recent Updates
 
-### Version 2.7.0 (Current)
+### Version 2.7.0 (Latest release)
 - **UI**: Reworked "Qualité et Codec" controls with dropdown selectors for video quality, codec, and audio format.
 - **New**: Added estimated download size preview before launching downloads.
 - **UX**: Logs section is more compact when collapsed and logs toggle is fully translated.

@@ -287,10 +287,22 @@ async function downloadVideo(options) {
                     // Previously, we called trimVideo here which corrupted the file by seeking
                     // to the original timestamp (e.g., 1 hour) in a file that's only 5 minutes.
 
-                    // Apply ProRes conversion if needed
+                    // Apply the selected delivery codec after downloading the best source quality.
                     if (codec === 'prores' && format !== 'audio' && downloadedFile) {
                         convertToProRes(downloadedFile, effectiveFfmpegPath, onProgress, (proresFile) => {
                             const finalFile = proresFile || downloadedFile;
+                            if (onComplete) onComplete(finalFile);
+                            resolve(finalFile);
+                        });
+                    } else if (codec === 'h264' && format !== 'audio' && downloadedFile) {
+                        ensureH264(downloadedFile, effectiveFfmpegPath, onProgress, (h264File, conversionError) => {
+                            if (conversionError) {
+                                if (onError) onError(conversionError);
+                                reject(conversionError);
+                                return;
+                            }
+
+                            const finalFile = h264File || downloadedFile;
                             if (onComplete) onComplete(finalFile);
                             resolve(finalFile);
                         });
@@ -460,12 +472,11 @@ function getVideoFormatSelector(videoQuality = 'max') {
     };
 
     const maxHeight = maxHeightByQuality[normalizedQuality];
+    const heightFilter = maxHeight ? `[height<=${maxHeight}]` : '';
 
-    if (!maxHeight) {
-        return 'bestvideo[vcodec^=avc1]+bestaudio/bestvideo[vcodec^=avc]+bestaudio/bestvideo[vcodec!=vp9]+bestaudio/best';
-    }
-
-    return `bestvideo[vcodec^=avc1][height<=${maxHeight}]+bestaudio/bestvideo[vcodec^=avc][height<=${maxHeight}]+bestaudio/bestvideo[vcodec!=vp9][height<=${maxHeight}]+bestaudio/best[height<=${maxHeight}]`;
+    // YouTube usually exposes 1440p and 4K only as VP9 or AV1, so source selection must not require H.264.
+    // Prefer SDR to keep the later H.264 conversion compatible, then fall back to any dynamic range.
+    return `bestvideo${heightFilter}[dynamic_range=SDR]+bestaudio/bestvideo${heightFilter}+bestaudio/best${heightFilter}`;
 }
 
 /**
@@ -678,6 +689,170 @@ function normalizeFfmpegExecutablePath(ffmpegPath) {
     }
 
     return trimmed;
+}
+
+/**
+ * Keep an existing H.264 download or transcode VP9/AV1 sources to H.264 for Premiere Pro.
+ */
+function ensureH264(inputFile, customFfmpegPath, onProgress, callback) {
+    const ffmpegPath = resolveFfmpegPath(customFfmpegPath);
+    const ffprobePath = resolveFfprobePath(ffmpegPath);
+    const probeArgs = [
+        '-v', 'error',
+        '-select_streams', 'v:0',
+        '-show_entries', 'stream=codec_name',
+        '-of', 'default=noprint_wrappers=1:nokey=1',
+        inputFile
+    ];
+
+    // Probe first so native H.264 downloads are not needlessly recompressed.
+    const ffprobe = spawn(ffprobePath, probeArgs, {
+        shell: false,
+        windowsHide: true
+    });
+
+    let codecOutput = '';
+    let probeFinished = false;
+
+    ffprobe.stdout.on('data', (data) => {
+        codecOutput += data.toString();
+    });
+
+    ffprobe.on('close', (code) => {
+        if (probeFinished) return;
+        probeFinished = true;
+
+        const sourceCodec = codecOutput.trim().toLowerCase();
+        if (code === 0 && sourceCodec === 'h264') {
+            console.log(`H.264 source detected, conversion skipped: ${inputFile}`);
+            callback(inputFile, null);
+            return;
+        }
+
+        // A failed probe is handled conservatively by transcoding to guarantee the requested output codec.
+        console.log(`Source codec "${sourceCodec || 'unknown'}" requires H.264 conversion.`);
+        convertToH264(inputFile, ffmpegPath, onProgress, callback);
+    });
+
+    ffprobe.on('error', (error) => {
+        if (probeFinished) return;
+        probeFinished = true;
+        console.warn('ffprobe unavailable, converting to H.264 to guarantee compatibility:', error.message);
+        convertToH264(inputFile, ffmpegPath, onProgress, callback);
+    });
+}
+
+/**
+ * Convert a downloaded video to an H.264 MP4 and replace the source only after success.
+ */
+function convertToH264(inputFile, ffmpegPath, onProgress, callback) {
+    const ext = path.extname(inputFile);
+    const basename = path.basename(inputFile, ext);
+    const dirname = path.dirname(inputFile);
+    const outputFile = path.join(dirname, `${basename}.h264-converting.mp4`);
+    let conversionFinished = false;
+
+    // Complete the asynchronous conversion exactly once across close and error events.
+    const finishConversion = (filePath, error) => {
+        if (conversionFinished) return;
+        conversionFinished = true;
+        callback(filePath, error);
+    };
+
+    if (onProgress) {
+        onProgress({
+            progress: 95,
+            status: 'finalizing'
+        });
+    }
+
+    const args = [
+        '-i', inputFile,
+        '-map', '0:v:0',
+        '-map', '0:a?',
+        '-c:v', 'libx264',
+        '-preset', 'medium',
+        '-crf', '18',
+        '-pix_fmt', 'yuv420p',
+        '-c:a', 'aac',
+        '-b:a', '192k',
+        '-movflags', '+faststart',
+        '-y',
+        outputFile
+    ];
+
+    console.log('Executing ffmpeg for H.264 conversion:', args.join(' '));
+    console.log('Using ffmpeg path for H.264 conversion:', ffmpegPath);
+
+    const ffmpeg = spawn(ffmpegPath, args, {
+        shell: false,
+        windowsHide: true
+    });
+
+    ffmpeg.stderr.on('data', (data) => {
+        console.log('ffmpeg H.264:', data.toString());
+    });
+
+    ffmpeg.on('close', (code) => {
+        if (code !== 0 || !fs.existsSync(outputFile)) {
+            finishConversion(null, new Error(`H.264 conversion failed with code ${code}`));
+            return;
+        }
+
+        try {
+            // The converted file is complete before the original download is replaced.
+            fs.unlinkSync(inputFile);
+            fs.renameSync(outputFile, inputFile);
+            console.log(`H.264 conversion successful: ${inputFile}`);
+            finishConversion(inputFile, null);
+        } catch (error) {
+            console.error('Unable to replace source with H.264 output:', error);
+            finishConversion(outputFile, null);
+        }
+    });
+
+    ffmpeg.on('error', (error) => {
+        finishConversion(null, new Error(`Unable to start H.264 conversion: ${error.message}`));
+    });
+}
+
+/**
+ * Resolve ffmpeg from a custom setting or the standard platform locations.
+ */
+function resolveFfmpegPath(customFfmpegPath) {
+    let ffmpegPath = customFfmpegPath || null;
+
+    if (!ffmpegPath && os.platform() === 'win32') {
+        const userHome = os.homedir();
+        const winPaths = [
+            path.join(userHome, 'multi-downloader-nx', 'ffmpeg.exe'),
+            'C:\\ffmpeg\\bin\\ffmpeg.exe',
+            'C:\\Program Files\\ffmpeg\\bin\\ffmpeg.exe',
+            path.join(userHome, 'AppData', 'Local', 'Programs', 'ffmpeg', 'bin', 'ffmpeg.exe')
+        ];
+        ffmpegPath = winPaths.find(candidate => fs.existsSync(candidate)) || null;
+    } else if (!ffmpegPath && os.platform() === 'darwin') {
+        const macPaths = [
+            '/opt/homebrew/bin/ffmpeg',
+            '/usr/local/bin/ffmpeg',
+            '/usr/bin/ffmpeg'
+        ];
+        ffmpegPath = macPaths.find(candidate => fs.existsSync(candidate)) || null;
+    }
+
+    return normalizeFfmpegExecutablePath(ffmpegPath || 'ffmpeg');
+}
+
+/**
+ * Resolve ffprobe next to ffmpeg so codec detection uses the same installed toolchain.
+ */
+function resolveFfprobePath(ffmpegPath) {
+    if (!ffmpegPath || ffmpegPath === 'ffmpeg') {
+        return os.platform() === 'win32' ? 'ffprobe.exe' : 'ffprobe';
+    }
+
+    const extension = os.platform() === 'win32' ? '.exe' : '';
+    return path.join(path.dirname(ffmpegPath), `ffprobe${extension}`);
 }
 
 /**
@@ -985,5 +1160,8 @@ function findLatestFile(directory) {
 
 module.exports = {
     downloadVideo,
-    estimateDownloadSize
+    estimateDownloadSize,
+    // Exported for focused regression tests without exposing these helpers in the panel UI.
+    getVideoFormatSelector,
+    normalizeVideoQuality
 };
