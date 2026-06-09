@@ -132,7 +132,8 @@ Run in Terminal:
 6. Click **Download**
 7. Video automatically imports into your project!
 
-> **4K note:** YouTube commonly provides 1440p and 4K only as VP9 or AV1. When H.264 is selected, the extension downloads that high-quality source and converts it with ffmpeg, so finalization can take longer.
+> [!IMPORTANT]
+> **4K downloads take longer to finish.** YouTube commonly provides 1440p and 4K only as VP9 or AV1. When H.264 is selected, the extension first downloads the high-quality source, then FFmpeg re-encodes the complete video to an H.264 file compatible with Premiere Pro. This conversion uses the processor heavily and can take as long as, or longer than, the download itself. Keep Premiere Pro and the extension open until finalization is complete.
 
 ---
 
