@@ -75,19 +75,18 @@ This extension needs the following tools installed on your computer:
 
 **2. Install the Extension**:
    Open Terminal.
-   - **Easiest method (recommended):** drag and drop `INSTALL_MACOS.sh` into the Terminal window, then press Enter (sudo will be requested by the script).
+   - **Easiest method (recommended):** drag and drop `INSTALL_MACOS.sh` into the Terminal window, then press Enter.
+   - The extension is installed only for your macOS account and does not request an administrator password.
    - **Manual method (command line):** navigate to the extracted folder and run:
    ```bash
    cd /path/to/PremiereYouTubeDownloader
    chmod +x INSTALL_MACOS.sh
-   sudo ./INSTALL_MACOS.sh
+   ./INSTALL_MACOS.sh
    ```
    - The script will install the extension AND automatically configure all tools.
+   - If an older system-wide copy already exists, it is left untouched; CEP uses the newer per-user version.
 
 **3. Start Premiere Pro**
-   - Go to **Window** > **Extensions** > **YouTube Downloader**
-
-**4. Start Premiere Pro**
    - Go to **Window** > **Extensions** > **YouTube Downloader**
 
 ---
@@ -193,7 +192,7 @@ ffmpeg requires manual installation on Windows:
 - Check Registry: `HKEY_CURRENT_USER\Software\Adobe\CSXS.11` should have `PlayerDebugMode` = `1`
 
 **macOS:**
-- Verify installation location: `/Library/Application Support/Adobe/CEP/extensions/PremiereYouTubeDownloader`
+- Verify installation location: `~/Library/Application Support/Adobe/CEP/extensions/PremiereYouTubeDownloader`
 - Run: `defaults read com.adobe.CSXS.11 PlayerDebugMode` (should return `1`)
 
 ### "yt-dlp not found" error
@@ -360,7 +359,7 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 | File | Description |
 |------|-------------|
 | `INSTALL_WINDOWS.bat` | Automated installer for Windows (run as admin) |
-| `INSTALL_MACOS.sh` | Automated installer for macOS (run with sudo) |
+| `INSTALL_MACOS.sh` | Automated per-user installer for macOS (no sudo required) |
 | `UPDATE_DEPENDENCIES.bat` | Force-update all dependencies (Windows) |
 | `UPDATE_DEPENDENCIES.sh` | Force-update all dependencies (macOS) |
 | `INSTALLATION_GUIDE.md` | Detailed manual installation instructions |

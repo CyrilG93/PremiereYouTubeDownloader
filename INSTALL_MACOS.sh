@@ -1,42 +1,34 @@
 #!/bin/bash
 # YouTube Downloader for Premiere Pro - macOS Installer
-# Version 2.7.1
+# Version 2.7.2
 
 echo ""
 echo "========================================"
 echo "YouTube Downloader for Premiere Pro"
-echo "Installation Package v2.7.1 - macOS"
+echo "Installation Package v2.7.2 - macOS"
 echo "========================================"
 echo ""
 
-# Get script directory
+# Get script directory and use Adobe's supported per-user CEP folder.
 SOURCE_DIR="$(cd "$(dirname "$0")" && pwd)"
-EXTENSION_PATH="/Library/Application Support/Adobe/CEP/extensions/PremiereYouTubeDownloader"
+EXTENSION_PATH="$HOME/Library/Application Support/Adobe/CEP/extensions/PremiereYouTubeDownloader"
+SYSTEM_EXTENSION_PATH="/Library/Application Support/Adobe/CEP/extensions/PremiereYouTubeDownloader"
 
 echo "Source directory: $SOURCE_DIR"
 echo "Target directory: $EXTENSION_PATH"
 echo ""
 
-# Check for sudo and auto-elevate if needed
-if [ "$EUID" -ne 0 ]; then
-    echo "This script requires administrator privileges."
-    echo "Requesting sudo access..."
-    sudo "$0" "$@"
-    exit $?
+# Refuse root so all installed files and settings belong to the current macOS user.
+if [ "$EUID" -eq 0 ]; then
+    echo "ERROR: Do not run this installer with sudo."
+    echo "Run INSTALL_MACOS.sh normally from your user account."
+    exit 1
 fi
 
-echo "[OK] Running with appropriate permissions"
+echo "[OK] Installing for the current user without administrator privileges"
 
-# Track the original interactive user for non-privileged package-manager calls
-INVOKING_USER="${SUDO_USER:-$USER}"
-INVOKING_HOME="$(eval echo "~$INVOKING_USER")"
-
-run_as_invoking_user() {
-    if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
-        sudo -H -u "$SUDO_USER" "$@"
-    else
-        "$@"
-    fi
+run_as_current_user() {
+    "$@"
 }
 
 find_tool_path() {
@@ -45,16 +37,12 @@ find_tool_path() {
 
     found="$(command -v "$tool" 2>/dev/null || true)"
 
-    if [ -z "$found" ] && [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "root" ]; then
-        found="$(run_as_invoking_user sh -lc "command -v $tool 2>/dev/null" | head -n 1)"
-    fi
-
     if [ -z "$found" ]; then
         case "$tool" in
             yt-dlp)
                 for candidate in \
-                    "$INVOKING_HOME/.local/bin/yt-dlp" \
-                    "$INVOKING_HOME"/Library/Python/*/bin/yt-dlp \
+                    "$HOME/.local/bin/yt-dlp" \
+                    "$HOME"/Library/Python/*/bin/yt-dlp \
                     "/opt/homebrew/bin/yt-dlp" \
                     "/usr/local/bin/yt-dlp"; do
                     if [ -x "$candidate" ]; then
@@ -65,7 +53,7 @@ find_tool_path() {
                 ;;
             deno)
                 for candidate in \
-                    "$INVOKING_HOME/.deno/bin/deno" \
+                    "$HOME/.deno/bin/deno" \
                     "/opt/homebrew/bin/deno" \
                     "/usr/local/bin/deno"; do
                     if [ -x "$candidate" ]; then
@@ -88,6 +76,14 @@ chmod +x "$SOURCE_DIR/UPDATE_DEPENDENCIES.sh" 2>/dev/null
 chmod +x "$SOURCE_DIR/INSTALL_MACOS.sh" 2>/dev/null
 
 echo ""
+
+if [ -d "$SYSTEM_EXTENSION_PATH" ]; then
+    echo "[INFO] An older system-wide installation exists at:"
+    echo "$SYSTEM_EXTENSION_PATH"
+    echo "It cannot be removed without administrator rights."
+    echo "The newer per-user version installed here will be used by CEP."
+    echo ""
+fi
 
 # Check if running from installation directory
 if [ "$SOURCE_DIR" = "$EXTENSION_PATH" ]; then
@@ -162,12 +158,12 @@ if [ -n "$YTDLP_PATH_RUNTIME" ]; then
     OLD_VERSION=$("$YTDLP_PATH_RUNTIME" --version 2>/dev/null)
     echo "[OK] yt-dlp currently installed: $OLD_VERSION"
     echo "Checking for updates..."
-    run_as_invoking_user "$PYTHON_BIN" -m pip install --upgrade --user "yt-dlp[default]" 2>&1 || \
-        run_as_invoking_user pip3 install --upgrade --user "yt-dlp[default]" 2>&1
+    run_as_current_user "$PYTHON_BIN" -m pip install --upgrade --user "yt-dlp[default]" 2>&1 || \
+        run_as_current_user pip3 install --upgrade --user "yt-dlp[default]" 2>&1
 else
     echo "Installing yt-dlp..."
-    run_as_invoking_user "$PYTHON_BIN" -m pip install --user "yt-dlp[default]" 2>&1 || \
-        run_as_invoking_user pip3 install --user "yt-dlp[default]" 2>&1
+    run_as_current_user "$PYTHON_BIN" -m pip install --user "yt-dlp[default]" 2>&1 || \
+        run_as_current_user pip3 install --user "yt-dlp[default]" 2>&1
 fi
 
 YTDLP_PATH_RUNTIME=$(find_tool_path "yt-dlp")
@@ -195,11 +191,11 @@ if [ -n "$DENO_BIN" ]; then
     echo "[OK] Deno currently installed: $OLD_DENO"
     echo "Checking for updates..."
     if [ -n "$BREW_BIN" ]; then
-        if ! run_as_invoking_user "$BREW_BIN" upgrade deno 2>&1; then
+        if ! run_as_current_user "$BREW_BIN" upgrade deno 2>&1; then
             echo "[INFO] Could not auto-upgrade Deno with Homebrew (non-blocking)."
         fi
     else
-        run_as_invoking_user sh -lc "curl -fsSL https://deno.land/install.sh | sh" 2>&1 || true
+        run_as_current_user sh -lc "curl -fsSL https://deno.land/install.sh | sh" 2>&1 || true
     fi
     DENO_BIN=$(find_tool_path "deno")
     NEW_DENO=$("$DENO_BIN" --version | head -n 1)
@@ -211,14 +207,14 @@ if [ -n "$DENO_BIN" ]; then
 else
     echo "Installing Deno..."
     if [ -n "$BREW_BIN" ]; then
-        run_as_invoking_user "$BREW_BIN" install deno
+        run_as_current_user "$BREW_BIN" install deno
     else
-        run_as_invoking_user sh -lc "curl -fsSL https://deno.land/install.sh | sh"
+        run_as_current_user sh -lc "curl -fsSL https://deno.land/install.sh | sh"
         echo "Please add Deno to your PATH manually if not detected."
     fi
     
     DENO_BIN=$(find_tool_path "deno")
-    if [ -n "$DENO_BIN" ] || [ -f "$INVOKING_HOME/.deno/bin/deno" ]; then
+    if [ -n "$DENO_BIN" ] || [ -f "$HOME/.deno/bin/deno" ]; then
         echo "[OK] Deno installed successfully"
     else
         echo "[WARNING] Deno installation may have failed"
@@ -265,17 +261,15 @@ if [ "$SKIP_COPY" = "0" ]; then
         exit 1
     fi
     
-    # Create extension directory
-    if [ ! -d "$EXTENSION_PATH" ]; then
-        echo "Creating extension directory..."
-        mkdir -p "$EXTENSION_PATH"
-    fi
+    # Create the per-user extension directories without administrator privileges.
+    echo "Creating extension directory..."
+    mkdir -p "$EXTENSION_PATH/client" "$EXTENSION_PATH/host" "$EXTENSION_PATH/CSXS"
     
-    # Copy files
+    # Copy folder contents so repeated installations update the existing extension cleanly.
     echo "Copying extension files..."
-    cp -R "$SOURCE_DIR/client" "$EXTENSION_PATH/"
-    cp -R "$SOURCE_DIR/host" "$EXTENSION_PATH/"
-    cp -R "$SOURCE_DIR/CSXS" "$EXTENSION_PATH/"
+    cp -R "$SOURCE_DIR/client/." "$EXTENSION_PATH/client/"
+    cp -R "$SOURCE_DIR/host/." "$EXTENSION_PATH/host/"
+    cp -R "$SOURCE_DIR/CSXS/." "$EXTENSION_PATH/CSXS/"
     
     [ -f "$SOURCE_DIR/.debug" ] && cp "$SOURCE_DIR/.debug" "$EXTENSION_PATH/"
     [ -f "$SOURCE_DIR/README.md" ] && cp "$SOURCE_DIR/README.md" "$EXTENSION_PATH/"
@@ -291,14 +285,11 @@ echo "Enabling CEP Debug Mode"
 echo "========================================"
 echo ""
 
-defaults write com.adobe.CSXS.10 PlayerDebugMode 1
-defaults write com.adobe.CSXS.11 PlayerDebugMode 1
-defaults write com.adobe.CSXS.12 PlayerDebugMode 1
-defaults write com.adobe.CSXS.13 PlayerDebugMode 1
-defaults write com.adobe.CSXS.14 PlayerDebugMode 1
-defaults write com.adobe.CSXS.15 PlayerDebugMode 1
-defaults write com.adobe.CSXS.16 PlayerDebugMode 1
-echo "[OK] CEP debug mode enabled for CSXS 10-16"
+# Write unsigned-extension settings only to the current user's preferences.
+for CSXS_VERSION in $(seq 10 20); do
+    defaults write "com.adobe.CSXS.$CSXS_VERSION" PlayerDebugMode 1
+done
+echo "[OK] CEP debug mode enabled for CSXS 10-20"
 
 echo ""
 echo "========================================"
@@ -340,9 +331,7 @@ JSON_CONTENT="$JSON_CONTENT\"ffmpegPath\": \"$FFMPEG_PATH\","
 JSON_CONTENT="$JSON_CONTENT\"denoPath\": \"$DENO_PATH\""
 JSON_CONTENT="$JSON_CONTENT}"
 
-# Write to file
-# Since we are running with sudo (potentially), ensure file is writable or created by user if possible, 
-# but usually extension folder is root owned anyway if in /Library.
+# Write the detected tool paths into the per-user extension.
 echo "$JSON_CONTENT" > "$CONFIG_FILE"
 
 if [ -f "$CONFIG_FILE" ]; then

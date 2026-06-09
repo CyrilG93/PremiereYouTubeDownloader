@@ -109,17 +109,18 @@ Wait for completion. Verify installations with `node --version`, `python3 --vers
    cd /path/to/PremiereYouTubeDownloader
    ```
    (Tip: drag the folder into Terminal to auto-fill the path)
-3. Run the installer with sudo:
+3. Run the installer normally. It installs the extension only for your macOS account and does not need an administrator password:
    ```bash
-   sudo ./INSTALL_MACOS.sh
+   ./INSTALL_MACOS.sh
    ```
-4. Enter your password when prompted
-5. The script will:
+4. The script will:
    - ✅ Verify dependencies
    - ✅ Auto-install/update yt-dlp
    - ✅ Copy extension files to Adobe CEP folder
    - ✅ Generate personalized configuration
    - ✅ Enable debug mode for CEP
+
+> If an older copy exists in `/Library/Application Support/Adobe/CEP/extensions`, the installer leaves it untouched because removing it requires administrator rights. CEP will use the newer per-user version.
 
 ### Step 4: Start Using
 
