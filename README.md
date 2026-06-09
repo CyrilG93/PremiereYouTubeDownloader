@@ -243,9 +243,14 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ---
 
-## 📝 Recent Updates
+## 📝 Changelog
 
-### Version 2.7.0 (Latest release)
+### Version 2.7.3 - 2026-06-09 (Latest release)
+- **4K downloads**: Maximum quality now retrieves the best available YouTube source, including 1440p and 4K.
+- **Premiere compatibility**: High-resolution VP9/AV1 sources are converted to H.264 when requested and imported under a distinct `[H264]` filename to avoid audio-only cache issues.
+- **macOS installation**: The installer now installs for the current user without `sudo` or an administrator password.
+
+### Version 2.7.0
 - **UI**: Reworked "Qualité et Codec" controls with dropdown selectors for video quality, codec, and audio format.
 - **New**: Added estimated download size preview before launching downloads.
 - **UX**: Logs section is more compact when collapsed and logs toggle is fully translated.
