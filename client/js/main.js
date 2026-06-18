@@ -69,7 +69,7 @@ console.error = function (...args) {
     addLog(args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' '), 'error');
 };
 
-console.log("YouTube Downloader v2.7.5 - Serverless Mode Initialized");
+console.log("YouTube Downloader v2.7.6 - Serverless Mode Initialized");
 
 if (toggleLogsBtn) {
     toggleLogsBtn.addEventListener('click', () => {
@@ -924,7 +924,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================================================
 
 const GITHUB_REPO = 'CyrilG93/PremiereYouTubeDownloader';
-let CURRENT_VERSION = '2.7.5';
+let CURRENT_VERSION = '2.7.6';
 
 /**
  * Compare two version strings (e.g. "1.0.0" vs "1.0.1")

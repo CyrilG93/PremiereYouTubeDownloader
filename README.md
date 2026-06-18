@@ -89,6 +89,7 @@ The folder contains several tools to help you if something goes wrong.
 |------|--------------|-----------------|
 | `INSTALL_WINDOWS.bat` | Installs the extension, configures paths, and sets debug mode. | **Run me first!** |
 | `UPDATE_DEPENDENCIES.bat` | Forces update of all dependencies (yt-dlp, Deno, etc.) to latest versions. | Run regularly to stay up to date. |
+| `UPDATE_DEPENDENCIES.sh` | Checks the macOS PKG private runtime, updates yt-dlp/Deno, and refreshes tool paths. | Use if YouTube downloads start failing after installation. |
 
 
 ---
@@ -105,12 +106,12 @@ See [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md) for detailed step-by-step ins
 Run `UPDATE_DEPENDENCIES.bat` to force-update all dependencies to the latest versions.
 
 ### macOS
-If you installed with the recommended PKG, install a newer PKG to update the private runtime and the extension.
-
-If you used the legacy shell installer, run in Terminal:
+If you installed with the recommended PKG, run in Terminal:
 ```bash
 ./UPDATE_DEPENDENCIES.sh
 ```
+
+This checks the private runtime installed by the PKG, updates yt-dlp and Deno when possible, verifies FFmpeg/FFprobe, and refreshes the extension config. If the private FFmpeg runtime is missing or broken, install the latest PKG again.
 
 ---
 
@@ -236,6 +237,9 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 ---
 
 ## 📝 Changelog
+
+### Version 2.7.6 - 2026-06-18
+- **macOS maintenance**: `UPDATE_DEPENDENCIES.sh` now checks the private PKG runtime, updates yt-dlp and Deno, verifies FFmpeg/FFprobe, and refreshes the extension tool paths.
 
 ### Version 2.7.5 - 2026-06-18
 - **macOS installer**: Added a one-step PKG installer with a private Python, yt-dlp, Deno, FFmpeg and FFprobe runtime.
