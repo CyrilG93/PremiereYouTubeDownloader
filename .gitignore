@@ -28,6 +28,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .youtubedownloader-macos-staging/
+.youtubedownloader-windows-staging/
 
 # Logs
 logs
@@ -36,6 +37,8 @@ logs
 # Generated installer artifacts
 Releases/*-macOS-Installer-*.pkg
 Releases/*-macOS-Runtime-*.tar.gz
+Releases/*-Windows-*-Installer.exe
+Releases/*-Windows-Runtime-*.exe
 
 # IDE
 .vscode/

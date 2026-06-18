@@ -1,12 +1,13 @@
 {
   "name": "premiere-youtube-downloader",
-  "version": "2.7.7",
+  "version": "2.7.8",
   "private": true,
   "description": "YouTube Downloader - Adobe Premiere Pro CEP extension.",
   "scripts": {
     "test": "node tests/downloader.test.js",
     "lint": "node --check client/js/downloader.js && node --check client/js/main.js && node --check client/js/i18n.js",
     "verify": "npm run lint && npm test",
-    "package:macos-pkg": "node scripts/youtubedownloader-package-macos-pkg.mjs"
+    "package:macos-pkg": "node scripts/youtubedownloader-package-macos-pkg.mjs",
+    "package:windows-exe": "node scripts/youtubedownloader-package-windows-exe.mjs"
   }
 }

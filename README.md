@@ -30,11 +30,11 @@ This extension needs the following tools installed on your computer:
 
 | Tool | Why is it needed? |
 |------|-------------------|
-| **Python 3** | Required to run yt-dlp (included in the macOS PKG) |
-| **yt-dlp** | Downloads videos from YouTube (included in the macOS PKG) |
+| **Python 3** | Required to run yt-dlp (included in the macOS PKG and Windows EXE) |
+| **yt-dlp** | Downloads videos from YouTube (included in the macOS PKG and Windows EXE) |
 | **yt-dlp-ejs** | Solves YouTube's JavaScript challenges (installed with yt-dlp) |
-| **Deno** | JavaScript runtime for yt-dlp challenge solving (included in the macOS PKG) |
-| **ffmpeg** | Converts video/audio to formats compatible with Premiere Pro (included in the macOS PKG) |
+| **Deno** | JavaScript runtime for yt-dlp challenge solving (included in the macOS PKG and Windows EXE) |
+| **ffmpeg** | Converts video/audio to formats compatible with Premiere Pro (included in the macOS PKG and Windows EXE) |
 
 > [!IMPORTANT]
 > **🍪 Authentication Issue? Use Firefox!**
@@ -49,15 +49,14 @@ This extension needs the following tools installed on your computer:
 
 ### Windows - Step by Step
 
-**1. Install Prerequisites** (Use default settings for all):
-   - [Download Node.js](https://nodejs.org/)
-   - [Download Python](https://www.python.org/downloads/) → **⚠️ Check "Add Python to PATH" during install**
-   - [Download ffmpeg](https://www.gyan.dev/ffmpeg/builds/) (See details below if needed)
+**1. Run the EXE installer (recommended)**:
+   - Open `PremiereYouTubeDownloader-vX-Windows-Full-Installer.exe`.
+   - The installer adds the Premiere extension and a private runtime with Python, yt-dlp, Deno, FFmpeg and FFprobe.
+   - No system Python, ffmpeg, or PATH setup is required for the recommended EXE installer.
 
-**2. Install the Extension**:
-   - Right-click `INSTALL_WINDOWS.bat` -> Select **Run as administrator**
-   - The script will install the extension AND automatically configure all tools.
-   - Wait for "Installation Complete" message.
+**2. Legacy BAT installer (advanced)**:
+   - Use `INSTALL_WINDOWS.bat` only if you prefer installing dependencies yourself.
+   - The legacy BAT can require administrator rights and system PATH configuration.
 
 **3. Start Premiere Pro**
    - Go to **Window** > **Extensions** > **YouTube Downloader**
@@ -87,7 +86,8 @@ The folder contains several tools to help you if something goes wrong.
 
 | File | What it does | When to use it? |
 |------|--------------|-----------------|
-| `INSTALL_WINDOWS.bat` | Installs the extension, configures paths, and sets debug mode. | **Run me first!** |
+| `PremiereYouTubeDownloader-vX-Windows-Full-Installer.exe` | Installs the Windows extension and private runtime in one step. | Recommended Windows installer. |
+| `INSTALL_WINDOWS.bat` | Legacy Windows installer using system dependencies. | Advanced/manual installs only. |
 | `UPDATE_DEPENDENCIES.bat` | Forces update of all dependencies (yt-dlp, Deno, etc.) to latest versions. | Run regularly to stay up to date. |
 | `UPDATE_DEPENDENCIES.sh` | Checks the macOS PKG private runtime, updates yt-dlp/Deno, and refreshes tool paths. | Use if YouTube downloads start failing after installation. |
 
@@ -103,7 +103,7 @@ See [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md) for detailed step-by-step ins
 ## ✅ How to update Dependencies
 
 ### Windows
-Run `UPDATE_DEPENDENCIES.bat` to force-update all dependencies to the latest versions.
+If you installed with the recommended EXE, install a newer EXE to update the private runtime and extension. If you used the legacy BAT installer, run `UPDATE_DEPENDENCIES.bat` to force-update system dependencies.
 
 ### macOS
 If you installed with the recommended PKG, run in Terminal:
@@ -161,7 +161,7 @@ Customize where your videos land relative to your Premiere Pro project.
 
 ## 🔧 Installing ffmpeg on Windows
 
-ffmpeg requires manual installation on Windows:
+Manual ffmpeg installation is only needed for the legacy BAT installer. The recommended Windows EXE includes a private FFmpeg runtime.
 
 1. Download from: https://www.gyan.dev/ffmpeg/builds/ (choose "ffmpeg-release-essentials.zip")
 2. Extract the ZIP file
@@ -182,7 +182,8 @@ ffmpeg requires manual installation on Windows:
 ### Extension doesn't appear in Premiere Pro
 
 **Windows:**
-- Verify installation location: `C:\Program Files\Common Files\Adobe\CEP\extensions\PremiereYouTubeDownloader`
+- Recommended EXE location: `%APPDATA%\Adobe\CEP\extensions\PremiereYouTubeDownloader`
+- Legacy BAT location: `C:\Program Files\Common Files\Adobe\CEP\extensions\PremiereYouTubeDownloader`
 - Check Registry: `HKEY_CURRENT_USER\Software\Adobe\CSXS.11` should have `PlayerDebugMode` = `1`
 
 **macOS:**
@@ -237,6 +238,9 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 ---
 
 ## 📝 Changelog
+
+### Version 2.7.8 - 2026-06-18
+- **Windows installer**: Added the base for an Inno Setup `.exe` installer with a private Python, yt-dlp, Deno, FFmpeg and FFprobe runtime.
 
 ### Version 2.7.7 - 2026-06-18
 - **macOS maintenance**: Deno update failures caused by network certificates are now reported as warnings when the installed Deno runtime is still usable.
