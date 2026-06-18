@@ -237,9 +237,12 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Changelog
 
-### Version 2.7.4 - 2026-06-18
+### Version 2.7.5 - 2026-06-18
 - **macOS installer**: Added a one-step PKG installer with a private Python, yt-dlp, Deno, FFmpeg and FFprobe runtime.
 - **Premiere compatibility**: The H.264 conversion can now fall back to the macOS video encoder when the bundled FFmpeg does not include `libx264`.
+- **Fix**: The installed panel now displays the correct app version.
+- **Fix**: H.264 and ProRes downloads now avoid AV1 sources when using the private macOS runtime, preventing conversion failures on Macs without AV1 hardware decoding.
+- **Fix**: Temporary `[H264].converting.mp4` files are ignored when the extension searches for the completed download.
 
 ### Version 2.7.3 - 2026-06-09
 - **4K downloads**: Maximum quality now retrieves the best available YouTube source, including 1440p and 4K.

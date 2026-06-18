@@ -60,7 +60,8 @@ async function downloadVideo(options) {
                 effectiveFfmpegPath,
                 effectiveCookieBrowser,
                 videoQuality,
-                audioFormat
+                audioFormat,
+                codec
             );
 
             // Determine yt-dlp executable path
@@ -242,8 +243,8 @@ async function downloadVideo(options) {
                     console.log(`FINAL audio file detected: ${downloadedFile}`);
                 }
 
-                // Also check for "has been downloaded" message
-                const downloadedMatch = output.match(/\[download\] (.+) has been downloaded/);
+                // Also check for "has been downloaded" messages, including yt-dlp cache hits.
+                const downloadedMatch = output.match(/\[download\] (.+) has (?:already )?been downloaded/);
                 if (downloadedMatch) {
                     const completedFile = path.join(destination, path.basename(downloadedMatch[1]));
                     console.log(`Download completed message for: ${completedFile}`);
@@ -335,7 +336,7 @@ async function downloadVideo(options) {
 /**
  * Build yt-dlp command arguments
  */
-function buildYtDlpArgs(url, format, destination, startTime, endTime, customFfmpegPath, cookieBrowser = 'firefox', videoQuality = 'max', audioFormat = 'wav') {
+function buildYtDlpArgs(url, format, destination, startTime, endTime, customFfmpegPath, cookieBrowser = 'firefox', videoQuality = 'max', audioFormat = 'wav', deliveryCodec = 'h264') {
     const args = [url];
 
     // Determine ffmpeg path for yt-dlp post-processing
@@ -391,7 +392,7 @@ function buildYtDlpArgs(url, format, destination, startTime, endTime, customFfmp
         args.push('-x');
         args.push('--audio-format', normalizeAudioFormat(audioFormat));
     } else {
-        args.push('-f', getVideoFormatSelector(videoQuality));
+        args.push('-f', getVideoFormatSelector(videoQuality, deliveryCodec));
         args.push('--merge-output-format', 'mp4');
 
         // Force audio to AAC codec (Premiere Pro doesn't support Opus/Vorbis)
@@ -460,7 +461,7 @@ function normalizeVideoQuality(videoQuality) {
     return allowed.has(quality) ? quality : 'max';
 }
 
-function getVideoFormatSelector(videoQuality = 'max') {
+function getVideoFormatSelector(videoQuality = 'max', deliveryCodec = 'h264') {
     const normalizedQuality = normalizeVideoQuality(videoQuality);
     const maxHeightByQuality = {
         '144': 144,
@@ -474,8 +475,17 @@ function getVideoFormatSelector(videoQuality = 'max') {
     const maxHeight = maxHeightByQuality[normalizedQuality];
     const heightFilter = maxHeight ? `[height<=${maxHeight}]` : '';
 
-    // YouTube usually exposes 1440p and 4K only as VP9 or AV1, so source selection must not require H.264.
-    // Prefer SDR to keep the later H.264 conversion compatible, then fall back to any dynamic range.
+    // YouTube usually exposes high resolutions as VP9 or AV1; prefer non-AV1 sources because the private macOS FFmpeg runtime intentionally avoids GPL/nonfree AV1 libraries.
+    if (deliveryCodec === 'h264' || deliveryCodec === 'prores') {
+        return [
+            `bestvideo${heightFilter}[dynamic_range=SDR][vcodec!*=av01]+bestaudio`,
+            `bestvideo${heightFilter}[vcodec!*=av01]+bestaudio`,
+            `best${heightFilter}[vcodec!*=av01]`,
+            `best[ext=mp4][vcodec!*=av01]`
+        ].join('/');
+    }
+
+    // Keep the generic selector permissive for workflows that do not need local video transcoding.
     return `bestvideo${heightFilter}[dynamic_range=SDR]+bestaudio/bestvideo${heightFilter}+bestaudio/best${heightFilter}`;
 }
 
@@ -847,7 +857,9 @@ function convertToH264(inputFile, ffmpegPath, onProgress, callback) {
         });
     };
 
-    runConversion('libx264');
+    // The private macOS runtime is LGPL-only, so start with VideoToolbox instead of unavailable libx264.
+    const usesPrivateMacRuntime = os.platform() === 'darwin' && ffmpegPath.includes('PremiereYouTubeDownloader/runtime/ffmpeg');
+    runConversion(usesPrivateMacRuntime ? 'h264_videotoolbox' : 'libx264');
 }
 
 /**
@@ -916,6 +928,7 @@ async function estimateDownloadSize(options) {
     const {
         url,
         format = 'both',
+        codec = 'h264',
         videoQuality = 'max',
         audioFormat = 'wav',
         startTime,
@@ -1030,7 +1043,7 @@ async function estimateDownloadSize(options) {
                 args.push('-x');
                 args.push('--audio-format', normalizeAudioFormat(audioFormat));
             } else {
-                args.push('-f', getVideoFormatSelector(videoQuality));
+                args.push('-f', getVideoFormatSelector(videoQuality, codec));
                 args.push('--merge-output-format', 'mp4');
             }
 
@@ -1175,7 +1188,8 @@ function findLatestFile(directory) {
         const files = fs.readdirSync(directory)
             .filter(file => {
                 const ext = path.extname(file).toLowerCase();
-                return ['.mp4', '.mov', '.mkv', '.webm', '.mp3', '.m4a', '.wav'].includes(ext);
+                // Ignore temporary conversion files so fallback scanning returns a completed media file.
+                return !file.includes('.converting.') && ['.mp4', '.mov', '.mkv', '.webm', '.mp3', '.m4a', '.wav'].includes(ext);
             })
             .map(file => ({
                 name: file,
@@ -1218,5 +1232,6 @@ module.exports = {
     // Exported for focused regression tests without exposing these helpers in the panel UI.
     getVideoFormatSelector,
     normalizeVideoQuality,
-    getH264OutputPaths
+    getH264OutputPaths,
+    findLatestFile
 };
