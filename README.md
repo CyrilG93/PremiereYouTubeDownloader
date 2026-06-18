@@ -239,6 +239,9 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Changelog
 
+### Version 2.7.9 - 2026-06-18
+- **Fix**: Windows EXE installs now detect the private runtime automatically when `config.json` is missing, preventing `spawn yt-dlp ENOENT` on clean machines.
+
 ### Version 2.7.8 - 2026-06-18
 - **Windows installer**: Added the base for an Inno Setup `.exe` installer with a private Python, yt-dlp, Deno, FFmpeg and FFprobe runtime.
 

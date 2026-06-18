@@ -3,6 +3,132 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
+function fileExists(filePath) {
+    // // Check optional tool paths without throwing when a folder is blocked or missing.
+    return Boolean(filePath) && fs.existsSync(filePath);
+}
+
+function getWindowsLocalAppData() {
+    // // Resolve LocalAppData even when CEP starts with a reduced Windows environment.
+    return process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
+}
+
+function getPrivateRuntimeConfig() {
+    // // Discover the installer private runtime directly so the extension does not depend only on config.json.
+    const platform = os.platform();
+    let runtimeRoot = null;
+    let paths = null;
+
+    if (platform === 'win32') {
+        runtimeRoot = path.join(getWindowsLocalAppData(), 'PremiereYouTubeDownloader', 'runtime');
+        paths = {
+            pythonPath: path.join(runtimeRoot, 'python', 'python.exe'),
+            ytDlpPath: path.join(runtimeRoot, 'python', 'Scripts', 'yt-dlp.exe'),
+            ffmpegPath: path.join(runtimeRoot, 'ffmpeg', 'bin', 'ffmpeg.exe'),
+            denoPath: path.join(runtimeRoot, 'deno', 'bin', 'deno.exe')
+        };
+    } else if (platform === 'darwin') {
+        runtimeRoot = path.join(os.homedir(), 'Library', 'Application Support', 'PremiereYouTubeDownloader', 'runtime');
+        paths = {
+            pythonPath: path.join(runtimeRoot, 'python', 'bin', 'python3'),
+            ytDlpPath: path.join(runtimeRoot, 'python', 'bin', 'yt-dlp'),
+            ffmpegPath: path.join(runtimeRoot, 'ffmpeg', 'bin', 'ffmpeg'),
+            denoPath: path.join(runtimeRoot, 'deno', 'bin', 'deno')
+        };
+    }
+
+    if (!paths) {
+        return {};
+    }
+
+    const config = {};
+    for (const [key, value] of Object.entries(paths)) {
+        if (fileExists(value)) {
+            config[key] = value;
+        }
+    }
+
+    if (config.ytDlpPath || config.ffmpegPath || config.denoPath) {
+        console.log('Detected private runtime at:', runtimeRoot);
+    }
+
+    return config;
+}
+
+function loadAutoConfig() {
+    // // Load installer-written paths, then fill missing values from the private runtime location.
+    let autoConfig = {};
+    try {
+        const configPath = path.join(__dirname, 'config.json');
+        if (fs.existsSync(configPath)) {
+            console.log('Loading configuration from:', configPath);
+            const configFile = fs.readFileSync(configPath, 'utf8');
+            autoConfig = JSON.parse(configFile);
+        }
+    } catch (e) {
+        console.error('Error loading config.json:', e);
+    }
+
+    const runtimeConfig = getPrivateRuntimeConfig();
+    const mergedConfig = { ...runtimeConfig };
+    for (const key of Object.keys(autoConfig)) {
+        if (autoConfig[key]) {
+            mergedConfig[key] = autoConfig[key];
+        }
+    }
+    return mergedConfig;
+}
+
+function resolveYtDlpPath(customYtdlpPath, autoConfig) {
+    // // Prefer user settings and installer paths before falling back to legacy system installs.
+    let ytDlpPath = customYtdlpPath || autoConfig.ytDlpPath || null;
+
+    if (!ytDlpPath && os.platform() === 'win32') {
+        const userHome = os.homedir();
+        const winPaths = [
+            path.join(userHome, 'AppData', 'Local', 'Programs', 'Python', 'Python314', 'Scripts', 'yt-dlp.exe'),
+            path.join(userHome, 'AppData', 'Local', 'Programs', 'Python', 'Python313', 'Scripts', 'yt-dlp.exe'),
+            path.join(userHome, 'AppData', 'Local', 'Programs', 'Python', 'Python312', 'Scripts', 'yt-dlp.exe'),
+            path.join(userHome, 'AppData', 'Local', 'Programs', 'Python', 'Python311', 'Scripts', 'yt-dlp.exe'),
+            path.join(userHome, 'AppData', 'Local', 'Programs', 'Python', 'Python310', 'Scripts', 'yt-dlp.exe'),
+            path.join(userHome, 'AppData', 'Roaming', 'Python', 'Python314', 'Scripts', 'yt-dlp.exe'),
+            path.join(userHome, 'AppData', 'Roaming', 'Python', 'Python313', 'Scripts', 'yt-dlp.exe'),
+            path.join(userHome, 'AppData', 'Roaming', 'Python', 'Python312', 'Scripts', 'yt-dlp.exe'),
+            path.join(userHome, 'AppData', 'Roaming', 'Python', 'Python311', 'Scripts', 'yt-dlp.exe'),
+            'C:\\Python314\\Scripts\\yt-dlp.exe',
+            'C:\\Python313\\Scripts\\yt-dlp.exe',
+            'C:\\Python312\\Scripts\\yt-dlp.exe',
+            'C:\\Python311\\Scripts\\yt-dlp.exe',
+        ];
+        for (const p of winPaths) {
+            if (fileExists(p)) {
+                ytDlpPath = p;
+                console.log('Found yt-dlp at:', ytDlpPath);
+                break;
+            }
+        }
+    } else if (!ytDlpPath && os.platform() === 'darwin') {
+        const macPaths = [
+            '/opt/homebrew/bin/yt-dlp',
+            '/usr/local/bin/yt-dlp',
+            '/usr/bin/yt-dlp'
+        ];
+        for (const p of macPaths) {
+            if (fileExists(p)) {
+                ytDlpPath = p;
+                break;
+            }
+        }
+    }
+
+    if (!ytDlpPath) {
+        ytDlpPath = 'yt-dlp';
+        console.log('Using yt-dlp from system PATH (fallback)');
+    }
+
+    return ytDlpPath;
+}
+
 /**
  * Download video from YouTube using yt-dlp
  */
@@ -27,18 +153,7 @@ async function downloadVideo(options) {
         cookieBrowser = 'firefox'
     } = options;
 
-    // LOAD EXTERNAL CONFIGURATION (AUTO-DETECTED PATHS)
-    let autoConfig = {};
-    try {
-        const configPath = path.join(__dirname, 'config.json');
-        if (fs.existsSync(configPath)) {
-            console.log('Loading configuration from:', configPath);
-            const configFile = fs.readFileSync(configPath, 'utf8');
-            autoConfig = JSON.parse(configFile);
-        }
-    } catch (e) {
-        console.error('Error loading config.json:', e);
-    }
+    const autoConfig = loadAutoConfig();
 
     return new Promise((resolve, reject) => {
         try {
@@ -65,53 +180,7 @@ async function downloadVideo(options) {
             );
 
             // Determine yt-dlp executable path
-            let ytDlpPath = customYtdlpPath || autoConfig.ytDlpPath || null;
-
-            if (!ytDlpPath && os.platform() === 'win32') {
-                // Check common Windows installation paths
-                const userHome = os.homedir();
-                const winPaths = [
-                    path.join(userHome, 'AppData', 'Local', 'Programs', 'Python', 'Python314', 'Scripts', 'yt-dlp.exe'),
-                    path.join(userHome, 'AppData', 'Local', 'Programs', 'Python', 'Python313', 'Scripts', 'yt-dlp.exe'),
-                    path.join(userHome, 'AppData', 'Local', 'Programs', 'Python', 'Python312', 'Scripts', 'yt-dlp.exe'),
-                    path.join(userHome, 'AppData', 'Local', 'Programs', 'Python', 'Python311', 'Scripts', 'yt-dlp.exe'),
-                    path.join(userHome, 'AppData', 'Local', 'Programs', 'Python', 'Python310', 'Scripts', 'yt-dlp.exe'),
-                    path.join(userHome, 'AppData', 'Roaming', 'Python', 'Python314', 'Scripts', 'yt-dlp.exe'),
-                    path.join(userHome, 'AppData', 'Roaming', 'Python', 'Python313', 'Scripts', 'yt-dlp.exe'),
-                    path.join(userHome, 'AppData', 'Roaming', 'Python', 'Python312', 'Scripts', 'yt-dlp.exe'),
-                    path.join(userHome, 'AppData', 'Roaming', 'Python', 'Python311', 'Scripts', 'yt-dlp.exe'),
-                    'C:\\Python314\\Scripts\\yt-dlp.exe',
-                    'C:\\Python313\\Scripts\\yt-dlp.exe',
-                    'C:\\Python312\\Scripts\\yt-dlp.exe',
-                    'C:\\Python311\\Scripts\\yt-dlp.exe',
-                ];
-                for (const p of winPaths) {
-                    if (fs.existsSync(p)) {
-                        ytDlpPath = p;
-                        console.log('Found yt-dlp at:', ytDlpPath);
-                        break;
-                    }
-                }
-            } else if (!ytDlpPath && os.platform() === 'darwin') {
-                // Check common macOS installation paths
-                const macPaths = [
-                    '/opt/homebrew/bin/yt-dlp',  // Apple Silicon Homebrew
-                    '/usr/local/bin/yt-dlp',      // Intel Homebrew
-                    '/usr/bin/yt-dlp'             // System install
-                ];
-                for (const p of macPaths) {
-                    if (fs.existsSync(p)) {
-                        ytDlpPath = p;
-                        break;
-                    }
-                }
-            }
-
-            // Fallback to system PATH if no explicit path found
-            if (!ytDlpPath) {
-                ytDlpPath = 'yt-dlp';
-                console.log('Using yt-dlp from system PATH (fallback)');
-            }
+            let ytDlpPath = resolveYtDlpPath(customYtdlpPath, autoConfig);
 
             console.log('Executing yt-dlp with args:', args);
             console.log('Using yt-dlp path:', ytDlpPath);
@@ -939,61 +1008,13 @@ async function estimateDownloadSize(options) {
         cookieBrowser = 'firefox'
     } = options || {};
 
-    let autoConfig = {};
-    try {
-        const configPath = path.join(__dirname, 'config.json');
-        if (fs.existsSync(configPath)) {
-            const configFile = fs.readFileSync(configPath, 'utf8');
-            autoConfig = JSON.parse(configFile);
-        }
-    } catch (e) {
-        console.error('Error loading config.json for size estimate:', e);
-    }
+    const autoConfig = loadAutoConfig();
 
     return new Promise((resolve, reject) => {
         try {
             const effectiveFfmpegPath = customFfmpegPath || autoConfig.ffmpegPath || null;
 
-            let ytDlpPath = customYtdlpPath || autoConfig.ytDlpPath || null;
-            if (!ytDlpPath && os.platform() === 'win32') {
-                const userHome = os.homedir();
-                const winPaths = [
-                    path.join(userHome, 'AppData', 'Local', 'Programs', 'Python', 'Python314', 'Scripts', 'yt-dlp.exe'),
-                    path.join(userHome, 'AppData', 'Local', 'Programs', 'Python', 'Python313', 'Scripts', 'yt-dlp.exe'),
-                    path.join(userHome, 'AppData', 'Local', 'Programs', 'Python', 'Python312', 'Scripts', 'yt-dlp.exe'),
-                    path.join(userHome, 'AppData', 'Local', 'Programs', 'Python', 'Python311', 'Scripts', 'yt-dlp.exe'),
-                    path.join(userHome, 'AppData', 'Roaming', 'Python', 'Python314', 'Scripts', 'yt-dlp.exe'),
-                    path.join(userHome, 'AppData', 'Roaming', 'Python', 'Python313', 'Scripts', 'yt-dlp.exe'),
-                    path.join(userHome, 'AppData', 'Roaming', 'Python', 'Python312', 'Scripts', 'yt-dlp.exe'),
-                    path.join(userHome, 'AppData', 'Roaming', 'Python', 'Python311', 'Scripts', 'yt-dlp.exe'),
-                    'C:\\Python314\\Scripts\\yt-dlp.exe',
-                    'C:\\Python313\\Scripts\\yt-dlp.exe',
-                    'C:\\Python312\\Scripts\\yt-dlp.exe',
-                    'C:\\Python311\\Scripts\\yt-dlp.exe',
-                ];
-                for (const p of winPaths) {
-                    if (fs.existsSync(p)) {
-                        ytDlpPath = p;
-                        break;
-                    }
-                }
-            } else if (!ytDlpPath && os.platform() === 'darwin') {
-                const macPaths = [
-                    '/opt/homebrew/bin/yt-dlp',
-                    '/usr/local/bin/yt-dlp',
-                    '/usr/bin/yt-dlp'
-                ];
-                for (const p of macPaths) {
-                    if (fs.existsSync(p)) {
-                        ytDlpPath = p;
-                        break;
-                    }
-                }
-            }
-
-            if (!ytDlpPath) {
-                ytDlpPath = 'yt-dlp';
-            }
+            let ytDlpPath = resolveYtDlpPath(customYtdlpPath, autoConfig);
 
             const customEnv = { ...process.env };
             if (os.platform() === 'win32') {
@@ -1230,6 +1251,7 @@ module.exports = {
     downloadVideo,
     estimateDownloadSize,
     // Exported for focused regression tests without exposing these helpers in the panel UI.
+    getPrivateRuntimeConfig,
     getVideoFormatSelector,
     normalizeVideoQuality,
     getH264OutputPaths,

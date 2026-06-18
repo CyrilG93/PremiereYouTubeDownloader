@@ -6,7 +6,8 @@ const {
     getVideoFormatSelector,
     normalizeVideoQuality,
     getH264OutputPaths,
-    findLatestFile
+    findLatestFile,
+    getPrivateRuntimeConfig
 } = require('../client/js/downloader');
 
 // Maximum quality must prefer non-AV1 sources when the extension needs local H.264 conversion.
@@ -52,5 +53,35 @@ fs.writeFileSync(staleTemporary, '');
 const staleTime = new Date(Date.now() + 10000);
 fs.utimesSync(staleTemporary, staleTime, staleTime);
 assert.strictEqual(findLatestFile(scanDirectory), realDownload);
+
+if (os.platform() === 'win32') {
+    // // A Windows EXE install must work even if the installer config.json is missing.
+    const previousLocalAppData = process.env.LOCALAPPDATA;
+    const localAppData = fs.mkdtempSync(path.join(os.tmpdir(), 'premiere-ytdl-localappdata-'));
+    const runtimeRoot = path.join(localAppData, 'PremiereYouTubeDownloader', 'runtime');
+    const toolPaths = [
+        path.join(runtimeRoot, 'python', 'python.exe'),
+        path.join(runtimeRoot, 'python', 'Scripts', 'yt-dlp.exe'),
+        path.join(runtimeRoot, 'ffmpeg', 'bin', 'ffmpeg.exe'),
+        path.join(runtimeRoot, 'deno', 'bin', 'deno.exe')
+    ];
+
+    for (const toolPath of toolPaths) {
+        fs.mkdirSync(path.dirname(toolPath), { recursive: true });
+        fs.writeFileSync(toolPath, '');
+    }
+
+    process.env.LOCALAPPDATA = localAppData;
+    const runtimeConfig = getPrivateRuntimeConfig();
+    assert.strictEqual(runtimeConfig.ytDlpPath, path.join(runtimeRoot, 'python', 'Scripts', 'yt-dlp.exe'));
+    assert.strictEqual(runtimeConfig.ffmpegPath, path.join(runtimeRoot, 'ffmpeg', 'bin', 'ffmpeg.exe'));
+    assert.strictEqual(runtimeConfig.denoPath, path.join(runtimeRoot, 'deno', 'bin', 'deno.exe'));
+
+    if (previousLocalAppData === undefined) {
+        delete process.env.LOCALAPPDATA;
+    } else {
+        process.env.LOCALAPPDATA = previousLocalAppData;
+    }
+}
 
 console.log('downloader format selector tests passed');
