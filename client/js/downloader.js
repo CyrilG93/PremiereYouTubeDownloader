@@ -768,59 +768,86 @@ function convertToH264(inputFile, ffmpegPath, onProgress, callback) {
         });
     }
 
-    const args = [
-        '-i', inputFile,
-        '-map', '0:v:0',
-        '-map', '0:a?',
-        '-c:v', 'libx264',
-        '-preset', 'medium',
-        '-crf', '18',
-        '-pix_fmt', 'yuv420p',
-        '-c:a', 'aac',
-        '-b:a', '192k',
-        '-movflags', '+faststart',
-        '-y',
-        outputFile
-    ];
+    const buildArgs = (encoder) => {
+        // Use libx264 when available, then fall back to macOS VideoToolbox for bundled FFmpeg builds without GPL encoders.
+        const videoArgs = encoder === 'h264_videotoolbox'
+            ? ['-c:v', 'h264_videotoolbox', '-b:v', '12000k', '-maxrate', '16000k', '-pix_fmt', 'yuv420p']
+            : ['-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-pix_fmt', 'yuv420p'];
 
-    console.log('Executing ffmpeg for H.264 conversion:', args.join(' '));
-    console.log('Using ffmpeg path for H.264 conversion:', ffmpegPath);
+        return [
+            '-i', inputFile,
+            '-map', '0:v:0',
+            '-map', '0:a?',
+            ...videoArgs,
+            '-c:a', 'aac',
+            '-b:a', '192k',
+            '-movflags', '+faststart',
+            '-y',
+            outputFile
+        ];
+    };
 
-    const ffmpeg = spawn(ffmpegPath, args, {
-        shell: false,
-        windowsHide: true
-    });
+    const runConversion = (encoder) => {
+        const args = buildArgs(encoder);
 
-    ffmpeg.stderr.on('data', (data) => {
-        console.log('ffmpeg H.264:', data.toString());
-    });
+        console.log(`Executing ffmpeg for H.264 conversion with ${encoder}:`, args.join(' '));
+        console.log('Using ffmpeg path for H.264 conversion:', ffmpegPath);
 
-    ffmpeg.on('close', (code) => {
-        if (code !== 0 || !fs.existsSync(outputFile)) {
-            finishConversion(null, new Error(`H.264 conversion failed with code ${code}`));
-            return;
-        }
+        const ffmpeg = spawn(ffmpegPath, args, {
+            shell: false,
+            windowsHide: true
+        });
 
-        try {
-            // Use a distinct final path so Premiere never reuses the VP9 source's audio-only cache entry.
-            fs.renameSync(outputFile, finalFile);
-            try {
-                fs.unlinkSync(inputFile);
-                console.log(`Deleted VP9/AV1 source after H.264 conversion: ${inputFile}`);
-            } catch (deleteError) {
-                console.warn('Unable to delete the original source after H.264 conversion:', deleteError.message);
+        ffmpeg.stderr.on('data', (data) => {
+            console.log(`ffmpeg H.264 (${encoder}):`, data.toString());
+        });
+
+        ffmpeg.on('close', (code) => {
+            if (code !== 0 || !fs.existsSync(outputFile)) {
+                if (encoder === 'libx264' && os.platform() === 'darwin') {
+                    try {
+                        if (fs.existsSync(outputFile)) fs.unlinkSync(outputFile);
+                    } catch (cleanupError) {
+                        console.warn('Unable to remove failed H.264 temporary output:', cleanupError.message);
+                    }
+                    console.warn('libx264 conversion failed; retrying with macOS h264_videotoolbox.');
+                    runConversion('h264_videotoolbox');
+                    return;
+                }
+
+                finishConversion(null, new Error(`H.264 conversion failed with ${encoder} and code ${code}`));
+                return;
             }
-            console.log(`H.264 conversion successful: ${finalFile}`);
-            finishConversion(finalFile, null);
-        } catch (error) {
-            console.error('Unable to finalize H.264 output:', error);
-            finishConversion(outputFile, null);
-        }
-    });
 
-    ffmpeg.on('error', (error) => {
-        finishConversion(null, new Error(`Unable to start H.264 conversion: ${error.message}`));
-    });
+            try {
+                // Use a distinct final path so Premiere never reuses the VP9 source's audio-only cache entry.
+                fs.renameSync(outputFile, finalFile);
+                try {
+                    fs.unlinkSync(inputFile);
+                    console.log(`Deleted VP9/AV1 source after H.264 conversion: ${inputFile}`);
+                } catch (deleteError) {
+                    console.warn('Unable to delete the original source after H.264 conversion:', deleteError.message);
+                }
+                console.log(`H.264 conversion successful: ${finalFile}`);
+                finishConversion(finalFile, null);
+            } catch (error) {
+                console.error('Unable to finalize H.264 output:', error);
+                finishConversion(outputFile, null);
+            }
+        });
+
+        ffmpeg.on('error', (error) => {
+            if (encoder === 'libx264' && os.platform() === 'darwin') {
+                console.warn('Unable to start libx264 conversion; retrying with macOS h264_videotoolbox:', error.message);
+                runConversion('h264_videotoolbox');
+                return;
+            }
+
+            finishConversion(null, new Error(`Unable to start H.264 conversion with ${encoder}: ${error.message}`));
+        });
+    };
+
+    runConversion('libx264');
 }
 
 /**

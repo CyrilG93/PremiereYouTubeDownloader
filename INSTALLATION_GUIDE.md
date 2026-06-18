@@ -8,19 +8,16 @@ This guide provides detailed step-by-step installation instructions for beginner
 
 ### Installation Summary
 
-| Step | Tool | Windows | macOS | Installed by script? |
+| Step | Tool | Windows | macOS PKG | Legacy scripts |
 |------|------|---------|-------|---------------------|
-| 1 | Node.js | Manual | Manual (Homebrew) | ❌ No |
-| 2 | Python | Manual | Manual (Homebrew) | ❌ No |
-| 3 | yt-dlp | Automatic | Automatic | ✅ Yes |
-| 4 | ffmpeg | Automatic* | Automatic* | ✅ Yes* |
-| 5 | Extension | Automatic | Automatic | ✅ Yes |
+| 1 | Python | Manual | Included | Manual on macOS |
+| 2 | yt-dlp | Automatic | Included | Automatic |
+| 3 | Deno | Automatic | Included | Automatic |
+| 4 | ffmpeg / ffprobe | Manual or configured path | Included | Manual on macOS |
+| 5 | Extension | Automatic | Included | Automatic |
 
 > [!IMPORTANT]
-> The installation scripts (`INSTALL_WINDOWS.bat` / `INSTALL_MACOS.sh`) will install **yt-dlp**, configure the extension, and even try to find/set up **ffmpeg** automatically if possible.
-> However, for the best reliability, we recommend installing **Node.js** and **Python** manually BEFORE running the script.
-
-\* *The script attempts to use standard locations or downloaded versions, but a manual install of ffmpeg is recommended for maximum compatibility.*
+> On macOS, use the `.pkg` installer when available. It installs the extension and the private runtime in one step, without asking you to install Homebrew first.
 
 ---
 
@@ -79,48 +76,35 @@ This guide provides detailed step-by-step installation instructions for beginner
 
 ## 🍎 macOS Installation
 
-### Step 1: Install Homebrew (Recommended)
+### Recommended: Run the PKG Installer
 
-Homebrew makes installing all the other tools very easy.
+1. Download the macOS installer for your Mac:
+   - Apple Silicon: `PremiereYouTubeDownloader-vX-macOS-Installer-arm64.pkg`
+   - Intel: `PremiereYouTubeDownloader-vX-macOS-Installer-x86_64.pkg`
+2. Double-click the `.pkg` file and follow the installer.
+3. The installer will:
+   - ✅ Install the extension in your Adobe CEP extensions folder
+   - ✅ Install a private Python runtime
+   - ✅ Install yt-dlp with YouTube challenge support
+   - ✅ Install Deno
+   - ✅ Install FFmpeg and FFprobe
+   - ✅ Generate the extension configuration automatically
+   - ✅ Enable CEP debug mode
 
-1. Open Terminal (Applications → Utilities → Terminal)
-2. Paste this command and press Enter:
+### Advanced: Legacy Shell Installer
+
+Use `INSTALL_MACOS.sh` only if you prefer managing dependencies yourself with Homebrew.
+
+1. Install Homebrew and the needed tools:
    ```bash
-   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+   brew install python ffmpeg deno yt-dlp
    ```
-3. Follow the on-screen instructions
-4. **Important**: After installation, run the commands it tells you to (typically `eval "$(/opt/homebrew/bin/brew shellenv)"`).
-
-### Step 2: Install Node.js, Python, and ffmpeg
-
-With Homebrew, you can install everything at once:
-
-```bash
-brew install node python ffmpeg
-```
-
-Wait for completion. Verify installations with `node --version`, `python3 --version`.
-
-### Step 3: Run the Installer
-
-1. Open Terminal
-2. Navigate to the PremiereYouTubeDownloader folder:
+2. Open Terminal and run:
    ```bash
    cd /path/to/PremiereYouTubeDownloader
-   ```
-   (Tip: drag the folder into Terminal to auto-fill the path)
-3. Run the installer normally. It installs the extension only for your macOS account and does not need an administrator password:
-   ```bash
    ./INSTALL_MACOS.sh
    ```
-4. The script will:
-   - ✅ Verify dependencies
-   - ✅ Auto-install/update yt-dlp
-   - ✅ Copy extension files to Adobe CEP folder
-   - ✅ Generate personalized configuration
-   - ✅ Enable debug mode for CEP
-
-> If an older copy exists in `/Library/Application Support/Adobe/CEP/extensions`, the installer leaves it untouched because removing it requires administrator rights. CEP will use the newer per-user version.
+3. The script installs the extension for your macOS account and leaves any older system-wide copy untouched.
 
 ### Step 4: Start Using
 
@@ -138,6 +122,9 @@ To force-update all dependencies (yt-dlp, Deno, ffmpeg) to the latest versions:
 Run `UPDATE_DEPENDENCIES.bat` by double-clicking it.
 
 ### macOS
+If you installed with the `.pkg`, install a newer `.pkg` to update both the extension and its private runtime.
+
+If you used the legacy shell installer:
 ```bash
 ./UPDATE_DEPENDENCIES.sh
 ```

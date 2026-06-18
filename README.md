@@ -30,12 +30,11 @@ This extension needs the following tools installed on your computer:
 
 | Tool | Why is it needed? |
 |------|-------------------|
-| **Node.js** | Required by Adobe CEP to run the extension's JavaScript code |
-| **Python 3** | Required to run yt-dlp (the YouTube download tool) |
-| **yt-dlp** | Downloads videos from YouTube (installed via Python pip) |
+| **Python 3** | Required to run yt-dlp (included in the macOS PKG) |
+| **yt-dlp** | Downloads videos from YouTube (included in the macOS PKG) |
 | **yt-dlp-ejs** | Solves YouTube's JavaScript challenges (installed with yt-dlp) |
-| **Deno** | JavaScript runtime for yt-dlp challenge solving |
-| **ffmpeg** | Converts video/audio to formats compatible with Premiere Pro |
+| **Deno** | JavaScript runtime for yt-dlp challenge solving (included in the macOS PKG) |
+| **ffmpeg** | Converts video/audio to formats compatible with Premiere Pro (included in the macOS PKG) |
 
 > [!IMPORTANT]
 > **🍪 Authentication Issue? Use Firefox!**
@@ -67,23 +66,14 @@ This extension needs the following tools installed on your computer:
 
 ### macOS - Step by Step
 
-**1. Install Prerequisites**:
-   Open Terminal and copy-paste this command to install everything at once (requires Homebrew):
-   ```bash
-   brew install node python ffmpeg deno yt-dlp
-   ```
+**1. Run the PKG installer (recommended)**:
+   - Open `PremiereYouTubeDownloader-vX-macOS-Installer-arm64.pkg` or `PremiereYouTubeDownloader-vX-macOS-Installer-x86_64.pkg`, depending on your Mac.
+   - The installer adds the Premiere extension and a private runtime with Python, yt-dlp, Deno, FFmpeg and FFprobe.
+   - No Homebrew setup is required for the recommended PKG installer.
 
-**2. Install the Extension**:
-   Open Terminal.
-   - **Easiest method (recommended):** drag and drop `INSTALL_MACOS.sh` into the Terminal window, then press Enter.
-   - The extension is installed only for your macOS account and does not request an administrator password.
-   - **Manual method (command line):** navigate to the extracted folder and run:
-   ```bash
-   cd /path/to/PremiereYouTubeDownloader
-   chmod +x INSTALL_MACOS.sh
-   ./INSTALL_MACOS.sh
-   ```
-   - The script will install the extension AND automatically configure all tools.
+**2. Legacy shell installer (advanced)**:
+   - Use `INSTALL_MACOS.sh` only if you prefer installing dependencies yourself with Homebrew.
+   - The shell installer installs the extension for your macOS account and does not request an administrator password.
    - If an older system-wide copy already exists, it is left untouched; CEP uses the newer per-user version.
 
 **3. Start Premiere Pro**
@@ -115,7 +105,9 @@ See [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md) for detailed step-by-step ins
 Run `UPDATE_DEPENDENCIES.bat` to force-update all dependencies to the latest versions.
 
 ### macOS
-Run in Terminal:
+If you installed with the recommended PKG, install a newer PKG to update the private runtime and the extension.
+
+If you used the legacy shell installer, run in Terminal:
 ```bash
 ./UPDATE_DEPENDENCIES.sh
 ```
@@ -245,7 +237,11 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Changelog
 
-### Version 2.7.3 - 2026-06-09 (Latest release)
+### Version 2.7.4 - 2026-06-18
+- **macOS installer**: Added a one-step PKG installer with a private Python, yt-dlp, Deno, FFmpeg and FFprobe runtime.
+- **Premiere compatibility**: The H.264 conversion can now fall back to the macOS video encoder when the bundled FFmpeg does not include `libx264`.
+
+### Version 2.7.3 - 2026-06-09
 - **4K downloads**: Maximum quality now retrieves the best available YouTube source, including 1440p and 4K.
 - **Premiere compatibility**: High-resolution VP9/AV1 sources are converted to H.264 when requested and imported under a distinct `[H264]` filename to avoid audio-only cache issues.
 - **macOS installation**: The installer now installs for the current user without `sudo` or an administrator password.

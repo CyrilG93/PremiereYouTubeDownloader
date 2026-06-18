@@ -27,10 +27,15 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.youtubedownloader-macos-staging/
 
 # Logs
 logs
 *.log
+
+# Generated installer artifacts
+Releases/*-macOS-Installer-*.pkg
+Releases/*-macOS-Runtime-*.tar.gz
 
 # IDE
 .vscode/
