@@ -162,7 +162,8 @@ update_private_deno() {
     echo "  Current version: ${old_version:-unknown}"
     echo "  Upgrading Deno executable in the private runtime..."
 
-    if DENO_INSTALL="${RUNTIME_DIR}/deno" "${PRIVATE_DENO}" upgrade --quiet; then
+    upgrade_output=""
+    if upgrade_output="$(NO_COLOR=1 DENO_TLS_CA_STORE=system DENO_INSTALL="${RUNTIME_DIR}/deno" "${PRIVATE_DENO}" upgrade 2>&1)"; then
         new_version="$(first_line "${PRIVATE_DENO}" --version || true)"
         if [ "${old_version}" != "${new_version}" ]; then
             echo "  [UPDATED] ${old_version:-unknown} -> ${new_version:-unknown}"
@@ -171,8 +172,17 @@ update_private_deno() {
             echo "  [OK] Already up to date: ${new_version:-unknown}"
         fi
     else
-        echo "  [FAILED] Could not update private Deno."
-        mark_failure
+        if "${PRIVATE_DENO}" --version >/dev/null 2>&1; then
+            echo "  [WARNING] Could not check/update Deno online, but the installed Deno still works."
+            if printf "%s" "${upgrade_output}" | grep -qi "certificate\\|UnknownIssuer\\|TLS\\|403\\|Zscaler\\|proxy"; then
+                echo "            The online update was blocked by network certificate, proxy, or web filtering."
+            fi
+            echo "            You can keep using the plugin; reinstall the latest PKG to update Deno offline."
+            mark_warning
+        else
+            echo "  [FAILED] Could not update private Deno, and the installed Deno no longer validates."
+            mark_failure
+        fi
     fi
 }
 

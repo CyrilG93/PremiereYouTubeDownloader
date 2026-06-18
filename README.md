@@ -111,7 +111,7 @@ If you installed with the recommended PKG, run in Terminal:
 ./UPDATE_DEPENDENCIES.sh
 ```
 
-This checks the private runtime installed by the PKG, updates yt-dlp and Deno when possible, verifies FFmpeg/FFprobe, and refreshes the extension config. If the private FFmpeg runtime is missing or broken, install the latest PKG again.
+This checks the private runtime installed by the PKG, updates yt-dlp and Deno when possible, verifies FFmpeg/FFprobe, and refreshes the extension config. If Deno cannot check online updates because of a network certificate, the script keeps the installed Deno as long as it still works. If the private FFmpeg runtime is missing or broken, install the latest PKG again.
 
 ---
 
@@ -237,6 +237,9 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 ---
 
 ## 📝 Changelog
+
+### Version 2.7.7 - 2026-06-18
+- **macOS maintenance**: Deno update failures caused by network certificates are now reported as warnings when the installed Deno runtime is still usable.
 
 ### Version 2.7.6 - 2026-06-18
 - **macOS maintenance**: `UPDATE_DEPENDENCIES.sh` now checks the private PKG runtime, updates yt-dlp and Deno, verifies FFmpeg/FFprobe, and refreshes the extension tool paths.
