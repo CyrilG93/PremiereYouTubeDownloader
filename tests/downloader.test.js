@@ -7,7 +7,8 @@ const {
     normalizeVideoQuality,
     getH264OutputPaths,
     findLatestFile,
-    getPrivateRuntimeConfig
+    getPrivateRuntimeConfig,
+    shouldRetryWithoutCookies
 } = require('../client/js/downloader');
 
 // Maximum quality must prefer non-AV1 sources when the extension needs local H.264 conversion.
@@ -53,6 +54,8 @@ fs.writeFileSync(staleTemporary, '');
 const staleTime = new Date(Date.now() + 10000);
 fs.utimesSync(staleTemporary, staleTime, staleTime);
 assert.strictEqual(findLatestFile(scanDirectory), realDownload);
+assert.strictEqual(shouldRetryWithoutCookies('', '', 'firefox'), true);
+assert.strictEqual(shouldRetryWithoutCookies('', '', 'none'), false);
 
 if (os.platform() === 'win32') {
     // // A Windows EXE install must work even if the installer config.json is missing.

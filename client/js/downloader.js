@@ -129,6 +129,26 @@ function resolveYtDlpPath(customYtdlpPath, autoConfig) {
     return ytDlpPath;
 }
 
+function shouldUseCookieBrowser(cookieBrowser) {
+    // // Allow retry paths and future UI choices to disable browser cookie extraction explicitly.
+    const normalized = String(cookieBrowser || '').trim().toLowerCase();
+    return Boolean(normalized) && !['none', 'off', 'disabled', 'no', 'false'].includes(normalized);
+}
+
+function shouldRetryWithoutCookies(errorBuffer, outputBuffer, cookieBrowser) {
+    // // Missing browser profiles often make yt-dlp exit immediately, sometimes without stderr in CEP.
+    if (!shouldUseCookieBrowser(cookieBrowser)) {
+        return false;
+    }
+
+    const combinedOutput = `${errorBuffer || ''}\n${outputBuffer || ''}`.trim();
+    if (!combinedOutput) {
+        return true;
+    }
+
+    return /cookie|cookies|browser|firefox|chrome|edge|brave|profile|could not find|not found|locked/i.test(combinedOutput);
+}
+
 /**
  * Download video from YouTube using yt-dlp
  */
@@ -381,6 +401,15 @@ async function downloadVideo(options) {
                         resolve(downloadedFile);
                     }
                 } else {
+                    if (shouldRetryWithoutCookies(errorBuffer, outputBuffer, effectiveCookieBrowser)) {
+                        console.log(`yt-dlp failed with ${effectiveCookieBrowser} cookies; retrying without browser cookies.`);
+                        downloadVideo({ ...options, cookieBrowser: 'none' }).then(resolve).catch((retryError) => {
+                            if (onError) onError(retryError);
+                            reject(retryError);
+                        });
+                        return;
+                    }
+
                     const error = new Error(`yt-dlp exited with code ${code}. Details: ${errorBuffer}`);
                     if (onError) onError(error);
                     reject(error);
@@ -492,9 +521,10 @@ function buildYtDlpArgs(url, format, destination, startTime, endTime, customFfmp
     // Embed metadata
     args.push('--embed-metadata');
 
-    // Use cookies from browser to bypass SABR restrictions
-    // This allows access to high quality formats
-    args.push('--cookies-from-browser', cookieBrowser);
+    if (shouldUseCookieBrowser(cookieBrowser)) {
+        // Use cookies from browser to bypass SABR restrictions when that browser is available.
+        args.push('--cookies-from-browser', cookieBrowser);
+    }
 
     // Ignore errors
     args.push('--ignore-errors');
@@ -1071,7 +1101,9 @@ async function estimateDownloadSize(options) {
             args.push('--dump-single-json');
             args.push('--skip-download');
             args.push('--no-playlist');
-            args.push('--cookies-from-browser', cookieBrowser || 'firefox');
+            if (shouldUseCookieBrowser(cookieBrowser)) {
+                args.push('--cookies-from-browser', cookieBrowser);
+            }
             args.push('--ignore-errors');
             args.push('--no-check-certificate');
 
@@ -1104,6 +1136,12 @@ async function estimateDownloadSize(options) {
 
             ytDlp.on('close', (code) => {
                 if (code !== 0) {
+                    if (shouldRetryWithoutCookies(stderrBuffer, stdoutBuffer, cookieBrowser || 'firefox')) {
+                        console.log(`yt-dlp estimate failed with ${cookieBrowser || 'firefox'} cookies; retrying without browser cookies.`);
+                        estimateDownloadSize({ ...(options || {}), cookieBrowser: 'none' }).then(resolve).catch(reject);
+                        return;
+                    }
+
                     reject(new Error(`yt-dlp estimate exited with code ${code}. ${stderrBuffer}`));
                     return;
                 }
@@ -1252,6 +1290,7 @@ module.exports = {
     estimateDownloadSize,
     // Exported for focused regression tests without exposing these helpers in the panel UI.
     getPrivateRuntimeConfig,
+    shouldRetryWithoutCookies,
     getVideoFormatSelector,
     normalizeVideoQuality,
     getH264OutputPaths,

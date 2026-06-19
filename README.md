@@ -239,6 +239,9 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Changelog
 
+### Version 2.7.10 - 2026-06-19
+- **Fix**: Windows downloads now retry automatically without browser cookies when cookie extraction fails immediately, avoiding silent `yt-dlp` code 1 errors on clean machines.
+
 ### Version 2.7.9 - 2026-06-18
 - **Fix**: Windows EXE installs now detect the private runtime automatically when `config.json` is missing, preventing `spawn yt-dlp ENOENT` on clean machines.
 
