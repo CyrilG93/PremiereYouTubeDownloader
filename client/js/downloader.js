@@ -160,7 +160,7 @@ function shouldRetryWithoutCookies(errorBuffer, outputBuffer, cookieBrowser) {
         return true;
     }
 
-    return /cookie|cookies|browser|firefox|chrome|edge|brave|profile|could not find|not found|locked/i.test(combinedOutput);
+    return /cookie|cookies|browser|firefox|chrome|edge|brave|profile|locked/i.test(combinedOutput);
 }
 
 /**
@@ -503,11 +503,14 @@ function buildYtDlpArgs(url, format, destination, startTime, endTime, customFfmp
         args.push('--audio-format', normalizeAudioFormat(audioFormat));
     } else {
         args.push('-f', getVideoFormatSelector(videoQuality, deliveryCodec));
-        args.push('--merge-output-format', 'mp4');
+        const needsLocalTranscode = deliveryCodec === 'h264' || deliveryCodec === 'prores';
+        args.push('--merge-output-format', needsLocalTranscode ? 'mkv' : 'mp4');
 
-        // Force audio to AAC codec (Premiere Pro doesn't support Opus/Vorbis)
-        args.push('--audio-format', 'best');
-        args.push('--postprocessor-args', 'ffmpeg:-c:a aac -b:a 192k');
+        if (!needsLocalTranscode) {
+            // // Force audio to AAC codec when the passthrough MP4 is the final Premiere file.
+            args.push('--audio-format', 'best');
+            args.push('--postprocessor-args', 'ffmpeg:-c:a aac -b:a 192k');
+        }
     }
 
     // Specify download directory
@@ -530,8 +533,10 @@ function buildYtDlpArgs(url, format, destination, startTime, endTime, customFfmp
     // This downloads solver scripts from GitHub automatically
     args.push('--remote-components', 'ejs:github');
 
-    // Embed metadata
-    args.push('--embed-metadata');
+    if (format === 'audio' || deliveryCodec === 'passthrough') {
+        // // Keep metadata only when yt-dlp's postprocessed file is the final user-facing output.
+        args.push('--embed-metadata');
+    }
 
     if (shouldUseCookieBrowser(cookieBrowser)) {
         // Use cookies from browser to bypass SABR restrictions when that browser is available.
@@ -844,7 +849,7 @@ function ensureH264(inputFile, customFfmpegPath, onProgress, callback) {
         probeFinished = true;
 
         const sourceCodec = codecOutput.trim().toLowerCase();
-        if (code === 0 && sourceCodec === 'h264') {
+        if (code === 0 && sourceCodec === 'h264' && path.extname(inputFile).toLowerCase() === '.mp4') {
             console.log(`H.264 source detected, conversion skipped: ${inputFile}`);
             callback(inputFile, null);
             return;
@@ -891,9 +896,14 @@ function convertToH264(inputFile, ffmpegPath, onProgress, callback) {
 
     const buildArgs = (encoder) => {
         // Use libx264 when available, then fall back to macOS VideoToolbox for bundled FFmpeg builds without GPL encoders.
-        const videoArgs = encoder === 'h264_videotoolbox'
-            ? ['-c:v', 'h264_videotoolbox', '-b:v', '12000k', '-maxrate', '16000k', '-pix_fmt', 'yuv420p']
-            : ['-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-pix_fmt', 'yuv420p'];
+        let videoArgs = ['-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-pix_fmt', 'yuv420p'];
+        if (encoder === 'h264_videotoolbox') {
+            videoArgs = ['-c:v', 'h264_videotoolbox', '-b:v', '12000k', '-maxrate', '16000k', '-pix_fmt', 'yuv420p'];
+        } else if (encoder === 'libopenh264') {
+            videoArgs = ['-c:v', 'libopenh264', '-b:v', '12000k', '-maxrate', '16000k', '-pix_fmt', 'yuv420p'];
+        } else if (encoder === 'h264_mf') {
+            videoArgs = ['-c:v', 'h264_mf', '-b:v', '12000k', '-pix_fmt', 'yuv420p'];
+        }
 
         return [
             '-i', inputFile,
@@ -933,6 +943,26 @@ function convertToH264(inputFile, ffmpegPath, onProgress, callback) {
                     }
                     console.warn('libx264 conversion failed; retrying with macOS h264_videotoolbox.');
                     runConversion('h264_videotoolbox');
+                    return;
+                }
+                if (encoder === 'libx264' && os.platform() === 'win32') {
+                    try {
+                        if (fs.existsSync(outputFile)) fs.unlinkSync(outputFile);
+                    } catch (cleanupError) {
+                        console.warn('Unable to remove failed H.264 temporary output:', cleanupError.message);
+                    }
+                    console.warn('libx264 conversion failed; retrying with Windows libopenh264.');
+                    runConversion('libopenh264');
+                    return;
+                }
+                if (encoder === 'libopenh264' && os.platform() === 'win32') {
+                    try {
+                        if (fs.existsSync(outputFile)) fs.unlinkSync(outputFile);
+                    } catch (cleanupError) {
+                        console.warn('Unable to remove failed H.264 temporary output:', cleanupError.message);
+                    }
+                    console.warn('libopenh264 conversion failed; retrying with Windows MediaFoundation H.264.');
+                    runConversion('h264_mf');
                     return;
                 }
 
@@ -1106,7 +1136,7 @@ async function estimateDownloadSize(options) {
                 args.push('--audio-format', normalizeAudioFormat(audioFormat));
             } else {
                 args.push('-f', getVideoFormatSelector(videoQuality, codec));
-                args.push('--merge-output-format', 'mp4');
+                args.push('--merge-output-format', codec === 'passthrough' ? 'mp4' : 'mkv');
             }
 
             args.push('--dump-single-json');
@@ -1303,6 +1333,7 @@ module.exports = {
     getPrivateRuntimeConfig,
     resolveYtDlpCommand,
     shouldRetryWithoutCookies,
+    buildYtDlpArgs,
     getVideoFormatSelector,
     normalizeVideoQuality,
     getH264OutputPaths,

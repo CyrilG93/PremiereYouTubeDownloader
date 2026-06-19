@@ -239,6 +239,10 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Changelog
 
+### Version 2.7.12 - 2026-06-19
+- **Fix**: Windows downloads now merge VP9/Opus sources into a safe intermediate file before converting to Premiere-friendly H.264, preventing failures at the final merge step.
+- **Fix**: Windows installer validation no longer reports a false FFprobe failure after FFprobe prints its version.
+
 ### Version 2.7.11 - 2026-06-19
 - **Fix**: Windows private runtime now launches yt-dlp through its bundled Python, preventing installer and download failures caused by a broken `yt-dlp.exe` launcher.
 

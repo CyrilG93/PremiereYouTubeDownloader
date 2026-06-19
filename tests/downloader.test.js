@@ -9,7 +9,8 @@ const {
     findLatestFile,
     getPrivateRuntimeConfig,
     resolveYtDlpCommand,
-    shouldRetryWithoutCookies
+    shouldRetryWithoutCookies,
+    buildYtDlpArgs
 } = require('../client/js/downloader');
 
 // Maximum quality must prefer non-AV1 sources when the extension needs local H.264 conversion.
@@ -57,6 +58,25 @@ fs.utimesSync(staleTemporary, staleTime, staleTime);
 assert.strictEqual(findLatestFile(scanDirectory), realDownload);
 assert.strictEqual(shouldRetryWithoutCookies('', '', 'firefox'), true);
 assert.strictEqual(shouldRetryWithoutCookies('', '', 'none'), false);
+assert.strictEqual(shouldRetryWithoutCookies('ERROR: [WinError 2] The system cannot find the file specified', '', 'firefox'), false);
+
+const h264DownloadArgs = buildYtDlpArgs(
+    'https://www.youtube.com/watch?v=example',
+    'both',
+    outputDirectory,
+    undefined,
+    undefined,
+    path.join(outputDirectory, 'ffmpeg.exe'),
+    'none',
+    'max',
+    'wav',
+    'h264'
+);
+assert.deepStrictEqual(
+    h264DownloadArgs.slice(h264DownloadArgs.indexOf('--merge-output-format'), h264DownloadArgs.indexOf('--merge-output-format') + 2),
+    ['--merge-output-format', 'mkv']
+);
+assert.strictEqual(h264DownloadArgs.includes('--embed-metadata'), false);
 
 if (os.platform() === 'win32') {
     // // A Windows EXE install must work even if the installer config.json is missing.

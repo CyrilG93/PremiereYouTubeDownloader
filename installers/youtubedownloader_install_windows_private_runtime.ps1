@@ -83,22 +83,30 @@ function Test-YtdlPrivateRuntime {
     Unblock-File -LiteralPath $tool -ErrorAction SilentlyContinue
   }
 
-  & $pythonPath -m yt_dlp --version | Write-Host
+  # // Capture native tool output before printing so PowerShell pipelines do not disturb process exit codes.
+  $ytDlpVersion = & $pythonPath -m yt_dlp --version 2>&1
   if ($LASTEXITCODE -ne 0) {
     throw "Private Python could not run yt-dlp."
   }
-  & $ffmpegPath -version | Select-Object -First 1 | Write-Host
+  $ytDlpVersion | Select-Object -First 1 | Write-Host
+
+  $ffmpegVersion = & $ffmpegPath -version 2>&1
   if ($LASTEXITCODE -ne 0) {
     throw "Private FFmpeg failed."
   }
-  & $ffprobePath -version | Select-Object -First 1 | Write-Host
+  $ffmpegVersion | Select-Object -First 1 | Write-Host
+
+  $ffprobeVersion = & $ffprobePath -version 2>&1
   if ($LASTEXITCODE -ne 0) {
     throw "Private FFprobe failed."
   }
-  & $denoPath --version | Select-Object -First 1 | Write-Host
+  $ffprobeVersion | Select-Object -First 1 | Write-Host
+
+  $denoVersion = & $denoPath --version 2>&1
   if ($LASTEXITCODE -ne 0) {
     throw "Private Deno failed."
   }
+  $denoVersion | Select-Object -First 1 | Write-Host
 }
 
 function Write-YtdlExtensionConfig {
