@@ -16,17 +16,17 @@ const {
 // Maximum quality must prefer non-AV1 sources when the extension needs local H.264 conversion.
 assert.strictEqual(
     getVideoFormatSelector('max'),
-    'bestvideo[dynamic_range=SDR][vcodec!*=av01]+bestaudio/bestvideo[vcodec!*=av01]+bestaudio/best[vcodec!*=av01]/best[ext=mp4][vcodec!*=av01]'
+    'bestvideo[height>1080][dynamic_range=SDR][vcodec!*=av01]+bestaudio/bestvideo[height>1080][vcodec!*=av01]+bestaudio/bestvideo[ext=mp4][vcodec*=avc1]+bestaudio[ext=m4a]/bestvideo[ext=mp4][vcodec*=avc1]+bestaudio[acodec*=mp4a]/best[ext=mp4][vcodec*=avc1]/bestvideo[dynamic_range=SDR][vcodec!*=av01]+bestaudio/bestvideo[vcodec!*=av01]+bestaudio/best[vcodec!*=av01]/best[ext=mp4][vcodec!*=av01]'
 );
 
 // Explicit quality choices cap resolution while keeping the default H.264 path away from AV1.
 assert.strictEqual(
     getVideoFormatSelector('4k'),
-    'bestvideo[height<=2160][dynamic_range=SDR][vcodec!*=av01]+bestaudio/bestvideo[height<=2160][vcodec!*=av01]+bestaudio/best[height<=2160][vcodec!*=av01]/best[ext=mp4][vcodec!*=av01]'
+    'bestvideo[height<=2160][height>1080][dynamic_range=SDR][vcodec!*=av01]+bestaudio/bestvideo[height<=2160][height>1080][vcodec!*=av01]+bestaudio/bestvideo[height<=2160][ext=mp4][vcodec*=avc1]+bestaudio[ext=m4a]/bestvideo[height<=2160][ext=mp4][vcodec*=avc1]+bestaudio[acodec*=mp4a]/best[height<=2160][ext=mp4][vcodec*=avc1]/bestvideo[height<=2160][dynamic_range=SDR][vcodec!*=av01]+bestaudio/bestvideo[height<=2160][vcodec!*=av01]+bestaudio/best[height<=2160][vcodec!*=av01]/best[ext=mp4][vcodec!*=av01]'
 );
 assert.strictEqual(
     getVideoFormatSelector('1080'),
-    'bestvideo[height<=1080][dynamic_range=SDR][vcodec!*=av01]+bestaudio/bestvideo[height<=1080][vcodec!*=av01]+bestaudio/best[height<=1080][vcodec!*=av01]/best[ext=mp4][vcodec!*=av01]'
+    'bestvideo[height<=1080][ext=mp4][vcodec*=avc1]+bestaudio[ext=m4a]/bestvideo[height<=1080][ext=mp4][vcodec*=avc1]+bestaudio[acodec*=mp4a]/best[height<=1080][ext=mp4][vcodec*=avc1]/bestvideo[height<=1080][dynamic_range=SDR][vcodec!*=av01]+bestaudio/bestvideo[height<=1080][vcodec!*=av01]+bestaudio/best[height<=1080][vcodec!*=av01]/best[ext=mp4][vcodec!*=av01]'
 );
 
 // Generic passthrough selectors remain permissive when no local transcode is needed.
@@ -72,10 +72,7 @@ const h264DownloadArgs = buildYtDlpArgs(
     'wav',
     'h264'
 );
-assert.deepStrictEqual(
-    h264DownloadArgs.slice(h264DownloadArgs.indexOf('--merge-output-format'), h264DownloadArgs.indexOf('--merge-output-format') + 2),
-    ['--merge-output-format', 'mkv']
-);
+assert.strictEqual(h264DownloadArgs.includes('--merge-output-format'), false);
 assert.strictEqual(h264DownloadArgs.includes('--embed-metadata'), false);
 
 if (os.platform() === 'win32') {

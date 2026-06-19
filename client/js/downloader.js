@@ -504,9 +504,9 @@ function buildYtDlpArgs(url, format, destination, startTime, endTime, customFfmp
     } else {
         args.push('-f', getVideoFormatSelector(videoQuality, deliveryCodec));
         const needsLocalTranscode = deliveryCodec === 'h264' || deliveryCodec === 'prores';
-        args.push('--merge-output-format', needsLocalTranscode ? 'mkv' : 'mp4');
 
         if (!needsLocalTranscode) {
+            args.push('--merge-output-format', 'mp4');
             // // Force audio to AAC codec when the passthrough MP4 is the final Premiere file.
             args.push('--audio-format', 'best');
             args.push('--postprocessor-args', 'ffmpeg:-c:a aac -b:a 192k');
@@ -591,8 +591,29 @@ function getVideoFormatSelector(videoQuality = 'max', deliveryCodec = 'h264') {
     const maxHeight = maxHeightByQuality[normalizedQuality];
     const heightFilter = maxHeight ? `[height<=${maxHeight}]` : '';
 
-    // YouTube usually exposes high resolutions as VP9 or AV1; prefer non-AV1 sources because the private macOS FFmpeg runtime intentionally avoids GPL/nonfree AV1 libraries.
-    if (deliveryCodec === 'h264' || deliveryCodec === 'prores') {
+    // YouTube usually exposes >1080p as VP9 or AV1; use it only when it actually buys extra resolution.
+    if (deliveryCodec === 'h264') {
+        const highResolutionFallbacks = [];
+        if (normalizedQuality === 'max' || normalizedQuality === '4k') {
+            highResolutionFallbacks.push(
+                `bestvideo${heightFilter}[height>1080][dynamic_range=SDR][vcodec!*=av01]+bestaudio`,
+                `bestvideo${heightFilter}[height>1080][vcodec!*=av01]+bestaudio`
+            );
+        }
+
+        return [
+            ...highResolutionFallbacks,
+            `bestvideo${heightFilter}[ext=mp4][vcodec*=avc1]+bestaudio[ext=m4a]`,
+            `bestvideo${heightFilter}[ext=mp4][vcodec*=avc1]+bestaudio[acodec*=mp4a]`,
+            `best${heightFilter}[ext=mp4][vcodec*=avc1]`,
+            `bestvideo${heightFilter}[dynamic_range=SDR][vcodec!*=av01]+bestaudio`,
+            `bestvideo${heightFilter}[vcodec!*=av01]+bestaudio`,
+            `best${heightFilter}[vcodec!*=av01]`,
+            `best[ext=mp4][vcodec!*=av01]`
+        ].join('/');
+    }
+
+    if (deliveryCodec === 'prores') {
         return [
             `bestvideo${heightFilter}[dynamic_range=SDR][vcodec!*=av01]+bestaudio`,
             `bestvideo${heightFilter}[vcodec!*=av01]+bestaudio`,

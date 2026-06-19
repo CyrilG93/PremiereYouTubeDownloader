@@ -239,6 +239,9 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Changelog
 
+### Version 2.7.13 - 2026-06-19
+- **Fix**: Standard HD downloads now prefer native MP4/H.264 + M4A when available, avoiding unnecessary FFmpeg conversion. Higher-than-1080p sources still use the conversion path when needed.
+
 ### Version 2.7.12 - 2026-06-19
 - **Fix**: Windows downloads now merge VP9/Opus sources into a safe intermediate file before converting to Premiere-friendly H.264, preventing failures at the final merge step.
 - **Fix**: Windows installer validation no longer reports a false FFprobe failure after FFprobe prints its version.
