@@ -239,6 +239,9 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Changelog
 
+### Version 2.7.11 - 2026-06-19
+- **Fix**: Windows private runtime now launches yt-dlp through its bundled Python, preventing installer and download failures caused by a broken `yt-dlp.exe` launcher.
+
 ### Version 2.7.10 - 2026-06-19
 - **Fix**: Windows downloads now retry automatically without browser cookies when cookie extraction fails immediately, avoiding silent `yt-dlp` code 1 errors on clean machines.
 

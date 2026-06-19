@@ -72,12 +72,11 @@ function Install-YtdlPrivateRuntime {
 function Test-YtdlPrivateRuntime {
   # // Validate all private tools before writing their paths to the CEP config file.
   $pythonPath = Join-Path $runtimeDir "python\python.exe"
-  $ytDlpPath = Join-Path $runtimeDir "python\Scripts\yt-dlp.exe"
   $ffmpegPath = Join-Path $runtimeDir "ffmpeg\bin\ffmpeg.exe"
   $ffprobePath = Join-Path $runtimeDir "ffmpeg\bin\ffprobe.exe"
   $denoPath = Join-Path $runtimeDir "deno\bin\deno.exe"
 
-  foreach ($tool in @($pythonPath, $ytDlpPath, $ffmpegPath, $ffprobePath, $denoPath)) {
+  foreach ($tool in @($pythonPath, $ffmpegPath, $ffprobePath, $denoPath)) {
     if (-not (Test-Path -LiteralPath $tool -PathType Leaf)) {
       throw "Private runtime tool is missing: $tool"
     }
@@ -87,10 +86,6 @@ function Test-YtdlPrivateRuntime {
   & $pythonPath -m yt_dlp --version | Write-Host
   if ($LASTEXITCODE -ne 0) {
     throw "Private Python could not run yt-dlp."
-  }
-  & $ytDlpPath --version | Write-Host
-  if ($LASTEXITCODE -ne 0) {
-    throw "Private yt-dlp executable failed."
   }
   & $ffmpegPath -version | Select-Object -First 1 | Write-Host
   if ($LASTEXITCODE -ne 0) {

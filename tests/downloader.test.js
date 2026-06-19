@@ -8,6 +8,7 @@ const {
     getH264OutputPaths,
     findLatestFile,
     getPrivateRuntimeConfig,
+    resolveYtDlpCommand,
     shouldRetryWithoutCookies
 } = require('../client/js/downloader');
 
@@ -79,6 +80,9 @@ if (os.platform() === 'win32') {
     assert.strictEqual(runtimeConfig.ytDlpPath, path.join(runtimeRoot, 'python', 'Scripts', 'yt-dlp.exe'));
     assert.strictEqual(runtimeConfig.ffmpegPath, path.join(runtimeRoot, 'ffmpeg', 'bin', 'ffmpeg.exe'));
     assert.strictEqual(runtimeConfig.denoPath, path.join(runtimeRoot, 'deno', 'bin', 'deno.exe'));
+    const ytDlpCommand = resolveYtDlpCommand('', runtimeConfig);
+    assert.strictEqual(ytDlpCommand.command, path.join(runtimeRoot, 'python', 'python.exe'));
+    assert.deepStrictEqual(ytDlpCommand.baseArgs, ['-m', 'yt_dlp']);
 
     if (previousLocalAppData === undefined) {
         delete process.env.LOCALAPPDATA;

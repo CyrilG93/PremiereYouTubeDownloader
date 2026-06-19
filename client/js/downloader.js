@@ -79,9 +79,23 @@ function loadAutoConfig() {
     return mergedConfig;
 }
 
-function resolveYtDlpPath(customYtdlpPath, autoConfig) {
-    // // Prefer user settings and installer paths before falling back to legacy system installs.
-    let ytDlpPath = customYtdlpPath || autoConfig.ytDlpPath || null;
+function resolveYtDlpCommand(customYtdlpPath, autoConfig) {
+    // // Prefer user settings, then run the private Windows runtime through Python to avoid broken pip launchers.
+    if (customYtdlpPath) {
+        return { command: customYtdlpPath, baseArgs: [], displayPath: customYtdlpPath };
+    }
+
+    const normalizedPythonPath = String(autoConfig.pythonPath || '').replace(/\//g, '\\').toLowerCase();
+    const isPrivateWindowsPython = normalizedPythonPath.includes('\\premiereyoutubedownloader\\runtime\\python\\python.exe');
+    if (os.platform() === 'win32' && isPrivateWindowsPython && fileExists(autoConfig.pythonPath)) {
+        return {
+            command: autoConfig.pythonPath,
+            baseArgs: ['-m', 'yt_dlp'],
+            displayPath: `${autoConfig.pythonPath} -m yt_dlp`
+        };
+    }
+
+    let ytDlpPath = autoConfig.ytDlpPath || null;
 
     if (!ytDlpPath && os.platform() === 'win32') {
         const userHome = os.homedir();
@@ -126,7 +140,7 @@ function resolveYtDlpPath(customYtdlpPath, autoConfig) {
         console.log('Using yt-dlp from system PATH (fallback)');
     }
 
-    return ytDlpPath;
+    return { command: ytDlpPath, baseArgs: [], displayPath: ytDlpPath };
 }
 
 function shouldUseCookieBrowser(cookieBrowser) {
@@ -186,7 +200,8 @@ async function downloadVideo(options) {
             // Priority: 1. Settings (UI) 2. AutoConfig (JSON) 3. Logic detection 4. PATH
             const effectiveFfmpegPath = customFfmpegPath || autoConfig.ffmpegPath || null;
             const effectiveCookieBrowser = cookieBrowser || 'firefox';
-            const args = buildYtDlpArgs(
+            const ytDlpCommand = resolveYtDlpCommand(customYtdlpPath, autoConfig);
+            const args = ytDlpCommand.baseArgs.concat(buildYtDlpArgs(
                 url,
                 format,
                 destination,
@@ -197,13 +212,10 @@ async function downloadVideo(options) {
                 videoQuality,
                 audioFormat,
                 codec
-            );
-
-            // Determine yt-dlp executable path
-            let ytDlpPath = resolveYtDlpPath(customYtdlpPath, autoConfig);
+            ));
 
             console.log('Executing yt-dlp with args:', args);
-            console.log('Using yt-dlp path:', ytDlpPath);
+            console.log('Using yt-dlp command:', ytDlpCommand.displayPath);
 
             // Build environment with full system PATH for yt-dlp to find deno, ffmpeg, etc.
             const customEnv = { ...process.env };
@@ -250,7 +262,7 @@ async function downloadVideo(options) {
             }
 
             // Spawn yt-dlp process
-            const ytDlp = spawn(ytDlpPath, args, {
+            const ytDlp = spawn(ytDlpCommand.command, args, {
                 cwd: destination,
                 windowsHide: true,
                 shell: false,
@@ -1043,8 +1055,7 @@ async function estimateDownloadSize(options) {
     return new Promise((resolve, reject) => {
         try {
             const effectiveFfmpegPath = customFfmpegPath || autoConfig.ffmpegPath || null;
-
-            let ytDlpPath = resolveYtDlpPath(customYtdlpPath, autoConfig);
+            const ytDlpCommand = resolveYtDlpCommand(customYtdlpPath, autoConfig);
 
             const customEnv = { ...process.env };
             if (os.platform() === 'win32') {
@@ -1079,7 +1090,7 @@ async function estimateDownloadSize(options) {
                 }
             }
 
-            const args = [url];
+            const args = ytDlpCommand.baseArgs.concat([url]);
             let ffmpegPath = effectiveFfmpegPath || null;
             if (!ffmpegPath) ffmpegPath = 'ffmpeg';
             ffmpegPath = normalizeFfmpegExecutablePath(ffmpegPath);
@@ -1117,7 +1128,7 @@ async function estimateDownloadSize(options) {
                 args.push('--download-sections', `*${formatTime(startTime)}-${formatTime(endTime)}`);
             }
 
-            const ytDlp = spawn(ytDlpPath, args, {
+            const ytDlp = spawn(ytDlpCommand.command, args, {
                 windowsHide: true,
                 shell: false,
                 env: customEnv
@@ -1290,6 +1301,7 @@ module.exports = {
     estimateDownloadSize,
     // Exported for focused regression tests without exposing these helpers in the panel UI.
     getPrivateRuntimeConfig,
+    resolveYtDlpCommand,
     shouldRetryWithoutCookies,
     getVideoFormatSelector,
     normalizeVideoQuality,
