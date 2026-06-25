@@ -31,7 +31,6 @@ function getPrivateRuntimeConfig() {
         runtimeRoot = path.join(os.homedir(), 'Library', 'Application Support', 'PremiereYouTubeDownloader', 'runtime');
         paths = {
             pythonPath: path.join(runtimeRoot, 'python', 'bin', 'python3'),
-            ytDlpPath: path.join(runtimeRoot, 'python', 'bin', 'yt-dlp'),
             ffmpegPath: path.join(runtimeRoot, 'ffmpeg', 'bin', 'ffmpeg'),
             denoPath: path.join(runtimeRoot, 'deno', 'bin', 'deno')
         };
@@ -80,14 +79,19 @@ function loadAutoConfig() {
 }
 
 function resolveYtDlpCommand(customYtdlpPath, autoConfig) {
-    // // Prefer user settings, then run the private Windows runtime through Python to avoid broken pip launchers.
+    // // Prefer user settings, then run private runtimes through Python to avoid non-portable pip launchers.
     if (customYtdlpPath) {
         return { command: customYtdlpPath, baseArgs: [], displayPath: customYtdlpPath };
     }
 
     const normalizedPythonPath = String(autoConfig.pythonPath || '').replace(/\//g, '\\').toLowerCase();
     const isPrivateWindowsPython = normalizedPythonPath.includes('\\premiereyoutubedownloader\\runtime\\python\\python.exe');
-    if (os.platform() === 'win32' && isPrivateWindowsPython && fileExists(autoConfig.pythonPath)) {
+    const normalizedMacPythonPath = String(autoConfig.pythonPath || '').replace(/\\/g, '/').toLowerCase();
+    const isPrivateMacPython = normalizedMacPythonPath.includes('/library/application support/premiereyoutubedownloader/runtime/python/bin/python3');
+    if (
+        ((os.platform() === 'win32' && isPrivateWindowsPython) || (os.platform() === 'darwin' && isPrivateMacPython)) &&
+        fileExists(autoConfig.pythonPath)
+    ) {
         return {
             command: autoConfig.pythonPath,
             baseArgs: ['-m', 'yt_dlp'],

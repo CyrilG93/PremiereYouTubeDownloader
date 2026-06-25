@@ -239,6 +239,9 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Changelog
 
+### Version 2.7.14 - 2026-06-25
+- **Fix**: The macOS PKG runtime now launches yt-dlp through its bundled Python, preventing installation failures caused by a non-portable yt-dlp launcher.
+
 ### Version 2.7.13 - 2026-06-19
 - **Fix**: Standard HD downloads now prefer native MP4/H.264 + M4A when available, avoiding unnecessary FFmpeg conversion. Higher-than-1080p sources still use the conversion path when needed.
 

@@ -91,12 +91,10 @@ ytdl_runtime_is_current() {
   [ -f "${version_file}" ] || return 1
   [ "$(tr -d '\r\n' <"${version_file}")" = "${YTDL_RUNTIME_VERSION}" ] || return 1
   [ -x "${runtime_dir}/python/bin/python3" ] || return 1
-  [ -x "${runtime_dir}/python/bin/yt-dlp" ] || return 1
   [ -x "${runtime_dir}/ffmpeg/bin/ffmpeg" ] || return 1
   [ -x "${runtime_dir}/ffmpeg/bin/ffprobe" ] || return 1
   [ -x "${runtime_dir}/deno/bin/deno" ] || return 1
   ytdl_run_as_user "${runtime_dir}/python/bin/python3" -m yt_dlp --version >/dev/null 2>&1 || return 1
-  ytdl_run_as_user "${runtime_dir}/python/bin/yt-dlp" --version >/dev/null 2>&1 || return 1
   ytdl_run_as_user "${runtime_dir}/ffmpeg/bin/ffmpeg" -version >/dev/null 2>&1 || return 1
   ytdl_run_as_user "${runtime_dir}/ffmpeg/bin/ffprobe" -version >/dev/null 2>&1 || return 1
   ytdl_run_as_user "${runtime_dir}/deno/bin/deno" --version >/dev/null 2>&1 || return 1
@@ -126,7 +124,7 @@ ytdl_install_runtime() {
 
   tar -xzf "${archive_path}" -C "${extracted_root}"
   new_runtime="${extracted_root}/runtime"
-  if [ ! -x "${new_runtime}/python/bin/yt-dlp" ] || [ ! -x "${new_runtime}/ffmpeg/bin/ffmpeg" ] || [ ! -x "${new_runtime}/deno/bin/deno" ]; then
+  if [ ! -x "${new_runtime}/python/bin/python3" ] || [ ! -x "${new_runtime}/ffmpeg/bin/ffmpeg" ] || [ ! -x "${new_runtime}/deno/bin/deno" ]; then
     rm -rf "${temp_root}"
     echo "The bundled runtime archive is incomplete." >&2
     exit 1
@@ -148,7 +146,6 @@ ytdl_validate_runtime() {
   # // Validate the runtime tools before exposing their paths to the extension.
   runtime_dir="$1"
   ytdl_run_as_user "${runtime_dir}/python/bin/python3" -m yt_dlp --version >/dev/null
-  ytdl_run_as_user "${runtime_dir}/python/bin/yt-dlp" --version >/dev/null
   ytdl_run_as_user "${runtime_dir}/ffmpeg/bin/ffmpeg" -version >/dev/null
   ytdl_run_as_user "${runtime_dir}/ffmpeg/bin/ffprobe" -version >/dev/null
   ytdl_run_as_user "${runtime_dir}/deno/bin/deno" --version >/dev/null
@@ -160,7 +157,6 @@ ytdl_write_extension_config() {
   extension_dir="${YTDL_HOME}/Library/Application Support/Adobe/CEP/extensions/PremiereYouTubeDownloader"
   config_file="${extension_dir}/client/js/config.json"
   python_path="${runtime_dir}/python/bin/python3"
-  ytdlp_path="${runtime_dir}/python/bin/yt-dlp"
   ffmpeg_path="${runtime_dir}/ffmpeg/bin/ffmpeg"
   deno_path="${runtime_dir}/deno/bin/deno"
   generated_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
@@ -173,7 +169,7 @@ ytdl_write_extension_config() {
   "generatedAtUtc": "$(ytdl_json_escape "${generated_at}")",
   "nodePath": "",
   "pythonPath": "$(ytdl_json_escape "${python_path}")",
-  "ytDlpPath": "$(ytdl_json_escape "${ytdlp_path}")",
+  "ytDlpPath": "",
   "ffmpegPath": "$(ytdl_json_escape "${ffmpeg_path}")",
   "denoPath": "$(ytdl_json_escape "${deno_path}")"
 }

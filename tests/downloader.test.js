@@ -108,4 +108,28 @@ if (os.platform() === 'win32') {
     }
 }
 
+if (os.platform() === 'darwin') {
+    // // The macOS PKG runtime must not execute the pip-generated yt-dlp launcher because it can keep build-machine paths.
+    const fakeHome = fs.mkdtempSync(path.join(os.tmpdir(), 'premiere-ytdl-mac-home-'));
+    const runtimeRoot = path.join(fakeHome, 'Library', 'Application Support', 'PremiereYouTubeDownloader', 'runtime');
+    const toolPaths = [
+        path.join(runtimeRoot, 'python', 'bin', 'python3'),
+        path.join(runtimeRoot, 'ffmpeg', 'bin', 'ffmpeg'),
+        path.join(runtimeRoot, 'deno', 'bin', 'deno')
+    ];
+    for (const toolPath of toolPaths) {
+        fs.mkdirSync(path.dirname(toolPath), { recursive: true });
+        fs.writeFileSync(toolPath, '');
+    }
+    const runtimeConfig = {
+        pythonPath: toolPaths[0],
+        ytDlpPath: path.join(runtimeRoot, 'python', 'bin', 'yt-dlp'),
+        ffmpegPath: toolPaths[1],
+        denoPath: toolPaths[2]
+    };
+    const ytDlpCommand = resolveYtDlpCommand('', runtimeConfig);
+    assert.strictEqual(ytDlpCommand.command, path.join(runtimeRoot, 'python', 'bin', 'python3'));
+    assert.deepStrictEqual(ytDlpCommand.baseArgs, ['-m', 'yt_dlp']);
+}
+
 console.log('downloader format selector tests passed');
