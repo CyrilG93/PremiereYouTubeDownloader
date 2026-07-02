@@ -239,6 +239,9 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Changelog
 
+### Version 2.7.16 - 2026-07-02
+- **Fix**: Time range downloads now stop before downloading when the selected range is outside the source video duration.
+
 ### Version 2.7.15 - 2026-07-02
 - **Fix**: Time range downloads now detect stalls and retry with a local trim fallback instead of staying stuck without progress.
 

@@ -69,7 +69,7 @@ console.error = function (...args) {
     addLog(args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' '), 'error');
 };
 
-console.log("YouTube Downloader v2.7.15 - Serverless Mode Initialized");
+console.log("YouTube Downloader v2.7.16 - Serverless Mode Initialized");
 
 if (toggleLogsBtn) {
     toggleLogsBtn.addEventListener('click', () => {
@@ -647,6 +647,61 @@ function parseTime(timeStr) {
     return null;
 }
 
+function formatDurationForMessage(seconds) {
+    // // Format a source duration so time-range errors are understandable to non-technical users.
+    if (!Number.isFinite(seconds) || seconds < 0) return '--:--';
+    const rounded = Math.floor(seconds);
+    const h = Math.floor(rounded / 3600);
+    const m = Math.floor((rounded % 3600) / 60);
+    const s = rounded % 60;
+    if (h > 0) {
+        return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+    return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+async function validateTimeRangeBeforeDownload(options) {
+    // // Ask yt-dlp for the source duration before downloading a selected time range.
+    if (!options || !Number.isFinite(options.startTime) || !Number.isFinite(options.endTime)) {
+        return true;
+    }
+
+    if (!downloader || typeof downloader.estimateDownloadSize !== 'function' || typeof downloader.validateTimeRangeAgainstDuration !== 'function') {
+        return true;
+    }
+
+    updateProgress(0, i18n.get('checkingVideoDuration'));
+
+    try {
+        const estimate = await downloader.estimateDownloadSize({
+            url: options.url,
+            format: options.format,
+            codec: options.codec,
+            videoQuality: options.videoQuality,
+            audioFormat: options.audioFormat,
+            startTime: options.startTime,
+            endTime: options.endTime,
+            customYtdlpPath: options.customYtdlpPath,
+            customFfmpegPath: options.customFfmpegPath,
+            customDenoPath: options.customDenoPath,
+            cookieBrowser: options.cookieBrowser
+        });
+
+        const duration = estimate && Number.isFinite(estimate.duration) ? estimate.duration : null;
+        const validation = downloader.validateTimeRangeAgainstDuration(options.startTime, options.endTime, duration);
+        if (!validation.valid) {
+            const durationLabel = formatDurationForMessage(duration);
+            showStatus(`${i18n.get('errorTimeRangeOutsideDuration')} ${durationLabel}`, 'error');
+            return false;
+        }
+    } catch (error) {
+        // // Keep downloads possible when metadata lookup fails for temporary network or YouTube reasons.
+        console.warn('Unable to validate source duration before download:', error && error.message ? error.message : error);
+    }
+
+    return true;
+}
+
 function getProjectPath(callback) {
     csInterface.evalScript('YouTube_getProjectPath()', (result) => {
         callback(result);
@@ -807,6 +862,11 @@ async function downloadVideo() {
                 }
             }
 
+            if (!(await validateTimeRangeBeforeDownload(options))) {
+                resetDownloadButton();
+                return;
+            }
+
             await downloader.downloadVideo(options);
 
         } catch (error) {
@@ -924,7 +984,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================================================
 
 const GITHUB_REPO = 'CyrilG93/PremiereYouTubeDownloader';
-let CURRENT_VERSION = '2.7.15';
+let CURRENT_VERSION = '2.7.16';
 
 /**
  * Compare two version strings (e.g. "1.0.0" vs "1.0.1")

@@ -175,6 +175,30 @@ function hasValidTimeRange(startTime, endTime) {
     return Number.isFinite(startTime) && Number.isFinite(endTime) && endTime > startTime;
 }
 
+function validateTimeRangeAgainstDuration(startTime, endTime, durationSeconds) {
+    // // Reject ranges outside the source duration before yt-dlp can create a misleading empty clip.
+    if (!hasValidTimeRange(startTime, endTime) || !Number.isFinite(durationSeconds) || durationSeconds <= 0) {
+        return { valid: true };
+    }
+
+    const toleranceSeconds = 0.5;
+    if (startTime >= durationSeconds - toleranceSeconds) {
+        return {
+            valid: false,
+            reason: 'start_after_duration'
+        };
+    }
+
+    if (endTime > durationSeconds + toleranceSeconds) {
+        return {
+            valid: false,
+            reason: 'end_after_duration'
+        };
+    }
+
+    return { valid: true };
+}
+
 function getTrackedFileSize(filePath) {
     // // Read the current output size defensively because FFmpeg may hold or remove partial files.
     try {
@@ -1529,6 +1553,7 @@ module.exports = {
     resolveYtDlpCommand,
     shouldRetryWithoutCookies,
     hasValidTimeRange,
+    validateTimeRangeAgainstDuration,
     buildYtDlpArgs,
     getVideoFormatSelector,
     normalizeVideoQuality,

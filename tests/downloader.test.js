@@ -11,6 +11,7 @@ const {
     resolveYtDlpCommand,
     shouldRetryWithoutCookies,
     hasValidTimeRange,
+    validateTimeRangeAgainstDuration,
     buildYtDlpArgs
 } = require('../client/js/downloader');
 
@@ -63,6 +64,15 @@ assert.strictEqual(shouldRetryWithoutCookies('ERROR: [WinError 2] The system can
 assert.strictEqual(hasValidTimeRange(1440, 1510), true);
 assert.strictEqual(hasValidTimeRange(1510, 1440), false);
 assert.strictEqual(hasValidTimeRange(undefined, 1510), false);
+assert.deepStrictEqual(validateTimeRangeAgainstDuration(0, 10, 89.69), { valid: true });
+assert.deepStrictEqual(validateTimeRangeAgainstDuration(1800, 2160, 89.69), {
+    valid: false,
+    reason: 'start_after_duration'
+});
+assert.deepStrictEqual(validateTimeRangeAgainstDuration(80, 120, 89.69), {
+    valid: false,
+    reason: 'end_after_duration'
+});
 
 const h264DownloadArgs = buildYtDlpArgs(
     'https://www.youtube.com/watch?v=example',
