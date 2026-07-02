@@ -239,6 +239,9 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Changelog
 
+### Version 2.7.17 - 2026-07-02
+- **UX**: Time range downloads now show a clearer preparation message while YouTube/FFmpeg is getting the selected section ready.
+
 ### Version 2.7.16 - 2026-07-02
 - **Fix**: Time range downloads now stop before downloading when the selected range is outside the source video duration.
 

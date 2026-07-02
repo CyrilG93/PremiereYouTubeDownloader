@@ -386,6 +386,13 @@ async function downloadVideo(options) {
             };
 
             if (hasTimeRange && !timeRangeFallbackMode) {
+                if (onProgress) {
+                    onProgress({
+                        progress: 1,
+                        status: 'timeRangePreparing'
+                    });
+                }
+
                 timeRangeMonitor = setInterval(() => {
                     const trackedSize = getTrackedFileSize(downloadedFile);
                     if (trackedSize > lastTrackedSize) {
@@ -398,6 +405,13 @@ async function downloadVideo(options) {
                             });
                         }
                         return;
+                    }
+
+                    if (Date.now() - lastActivityAtMs >= TIME_RANGE_HEARTBEAT_MS && onProgress) {
+                        onProgress({
+                            progress: Math.max(1, Math.min(94, currentProgress || 5)),
+                            status: 'timeRangePreparing'
+                        });
                     }
 
                     if (Date.now() - lastActivityAtMs >= TIME_RANGE_STALL_FALLBACK_MS) {
