@@ -3,6 +3,9 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
+const TIME_RANGE_HEARTBEAT_MS = 30000;
+const TIME_RANGE_STALL_FALLBACK_MS = 180000;
+
 function fileExists(filePath) {
     // // Check optional tool paths without throwing when a folder is blocked or missing.
     return Boolean(filePath) && fs.existsSync(filePath);
@@ -167,6 +170,61 @@ function shouldRetryWithoutCookies(errorBuffer, outputBuffer, cookieBrowser) {
     return /cookie|cookies|browser|firefox|chrome|edge|brave|profile|locked/i.test(combinedOutput);
 }
 
+function hasValidTimeRange(startTime, endTime) {
+    // // Treat a time range as active only when both bounds are numeric and ordered.
+    return Number.isFinite(startTime) && Number.isFinite(endTime) && endTime > startTime;
+}
+
+function getTrackedFileSize(filePath) {
+    // // Read the current output size defensively because FFmpeg may hold or remove partial files.
+    try {
+        if (filePath && fs.existsSync(filePath)) {
+            return fs.statSync(filePath).size;
+        }
+    } catch (error) {
+        console.warn('Unable to read tracked download file size:', error.message);
+    }
+    return 0;
+}
+
+function cleanupStalledTimeRangeFile(filePath, startedAtMs) {
+    // // Remove only the partial file created by the stalled time-range run before retrying another strategy.
+    try {
+        if (!filePath || !fs.existsSync(filePath)) {
+            return;
+        }
+
+        const stats = fs.statSync(filePath);
+        if (stats.mtimeMs + 5000 >= startedAtMs) {
+            fs.unlinkSync(filePath);
+            console.log(`Removed stalled time-range partial file: ${filePath}`);
+        }
+    } catch (error) {
+        console.warn('Unable to remove stalled time-range partial file:', error.message);
+    }
+}
+
+function stopProcessTree(childProcess) {
+    // // Stop yt-dlp and any FFmpeg child it started, which is especially important on Windows.
+    if (!childProcess || !childProcess.pid) {
+        return;
+    }
+
+    if (os.platform() === 'win32') {
+        const taskkill = spawn('taskkill', ['/pid', String(childProcess.pid), '/t', '/f'], {
+            windowsHide: true,
+            shell: false
+        });
+        taskkill.on('error', (error) => {
+            console.warn('taskkill failed, falling back to direct process kill:', error.message);
+            childProcess.kill();
+        });
+        return;
+    }
+
+    childProcess.kill();
+}
+
 /**
  * Download video from YouTube using yt-dlp
  */
@@ -184,6 +242,7 @@ async function downloadVideo(options) {
         onComplete,
         onError,
         signal,
+        timeRangeFallbackMode = false,
         // Custom tool paths from settings
         customYtdlpPath,
         customFfmpegPath,
@@ -204,13 +263,16 @@ async function downloadVideo(options) {
             // Priority: 1. Settings (UI) 2. AutoConfig (JSON) 3. Logic detection 4. PATH
             const effectiveFfmpegPath = customFfmpegPath || autoConfig.ffmpegPath || null;
             const effectiveCookieBrowser = cookieBrowser || 'firefox';
+            const hasTimeRange = hasValidTimeRange(startTime, endTime);
+            const ytDlpStartTime = timeRangeFallbackMode ? undefined : startTime;
+            const ytDlpEndTime = timeRangeFallbackMode ? undefined : endTime;
             const ytDlpCommand = resolveYtDlpCommand(customYtdlpPath, autoConfig);
             const args = ytDlpCommand.baseArgs.concat(buildYtDlpArgs(
                 url,
                 format,
                 destination,
-                startTime,
-                endTime,
+                ytDlpStartTime,
+                ytDlpEndTime,
                 effectiveFfmpegPath,
                 effectiveCookieBrowser,
                 videoQuality,
@@ -220,6 +282,9 @@ async function downloadVideo(options) {
 
             console.log('Executing yt-dlp with args:', args);
             console.log('Using yt-dlp command:', ytDlpCommand.displayPath);
+            if (timeRangeFallbackMode && hasTimeRange) {
+                console.log('Time-range fallback mode enabled: downloading full file before local trim.');
+            }
 
             // Build environment with full system PATH for yt-dlp to find deno, ffmpeg, etc.
             const customEnv = { ...process.env };
@@ -273,22 +338,73 @@ async function downloadVideo(options) {
                 env: customEnv
             });
 
+            const processStartedAtMs = Date.now();
+            let outputBuffer = '';
+            let downloadedFile = null;
+            let errorBuffer = '';
+            let lastActivityAtMs = processStartedAtMs;
+            let lastTrackedSize = 0;
+            let currentProgress = 0;
+            let timeRangeMonitor = null;
+            let killedForTimeRangeFallback = false;
+
+            const stopTimeRangeMonitor = () => {
+                // // Clear the watchdog when yt-dlp exits so retries and imports do not keep old timers alive.
+                if (timeRangeMonitor) {
+                    clearInterval(timeRangeMonitor);
+                    timeRangeMonitor = null;
+                }
+            };
+
+            const markActivity = () => {
+                // // Track any child-process output as proof that yt-dlp or FFmpeg is still alive.
+                lastActivityAtMs = Date.now();
+            };
+
+            if (hasTimeRange && !timeRangeFallbackMode) {
+                timeRangeMonitor = setInterval(() => {
+                    const trackedSize = getTrackedFileSize(downloadedFile);
+                    if (trackedSize > lastTrackedSize) {
+                        lastTrackedSize = trackedSize;
+                        lastActivityAtMs = Date.now();
+                        if (onProgress) {
+                            onProgress({
+                                progress: Math.max(1, Math.min(94, currentProgress || 5)),
+                                status: 'timeRangeStillWorking'
+                            });
+                        }
+                        return;
+                    }
+
+                    if (Date.now() - lastActivityAtMs >= TIME_RANGE_STALL_FALLBACK_MS) {
+                        killedForTimeRangeFallback = true;
+                        stopTimeRangeMonitor();
+                        console.log('Time-range download stalled; retrying with full download plus local trim.');
+                        if (onProgress) {
+                            onProgress({
+                                progress: 0,
+                                status: 'timeRangeFallback'
+                            });
+                        }
+                        stopProcessTree(ytDlp);
+                    }
+                }, TIME_RANGE_HEARTBEAT_MS);
+            }
+
             // Handle cancellation
             if (signal) {
                 signal.addEventListener('abort', () => {
                     console.log('Download cancelled by user');
-                    ytDlp.kill();
+                    stopTimeRangeMonitor();
+                    stopProcessTree(ytDlp);
                     reject(new Error('Download cancelled'));
                 });
             }
 
-            let outputBuffer = '';
-            let downloadedFile = null;
-            let errorBuffer = '';
-
             // Handle stdout
             ytDlp.stdout.on('data', (data) => {
                 const output = data.toString();
+                markActivity();
                 outputBuffer += output;
                 console.log('yt-dlp stdout:', output);
 
@@ -296,6 +412,7 @@ async function downloadVideo(options) {
                 const progressMatch = output.match(/(\d+\.?\d*)%/);
                 if (progressMatch) {
                     const percent = parseFloat(progressMatch[1]);
+                    currentProgress = percent;
                     if (onProgress) {
                         onProgress({
                             progress: percent,
@@ -363,6 +480,7 @@ async function downloadVideo(options) {
             // Handle stderr (ffmpeg outputs progress info here, not just errors)
             ytDlp.stderr.on('data', (data) => {
                 const errorStr = data.toString();
+                markActivity();
                 errorBuffer += errorStr;
                 // Use console.log since ffmpeg sends progress/metadata to stderr (not actual errors)
                 console.log('yt-dlp stderr:', errorStr);
@@ -370,9 +488,23 @@ async function downloadVideo(options) {
 
             // Handle completion
             ytDlp.on('close', (code) => {
+                stopTimeRangeMonitor();
                 console.log(`yt-dlp exited with code ${code}`);
 
                 if (signal && signal.aborted) {
+                    return;
+                }
+
+                if (killedForTimeRangeFallback) {
+                    cleanupStalledTimeRangeFile(downloadedFile, processStartedAtMs);
+                    downloadVideo({
+                        ...options,
+                        cookieBrowser: effectiveCookieBrowser,
+                        timeRangeFallbackMode: true
+                    }).then(resolve).catch((fallbackError) => {
+                        if (onError) onError(fallbackError);
+                        reject(fallbackError);
+                    });
                     return;
                 }
 
@@ -388,33 +520,46 @@ async function downloadVideo(options) {
                     console.log(`Final file to be used: ${downloadedFile}`);
                     console.log(`File exists: ${downloadedFile && fs.existsSync(downloadedFile)}`);
 
-                    // NOTE: When startTime/endTime are specified, yt-dlp uses --download-sections
-                    // which already downloads ONLY the requested section. No additional trimming needed.
-                    // Previously, we called trimVideo here which corrupted the file by seeking
-                    // to the original timestamp (e.g., 1 hour) in a file that's only 5 minutes.
+                    const finalizeDownloadedFile = (sourceFile) => {
+                        // Apply the selected delivery codec after downloading the best source quality.
+                        if (codec === 'prores' && format !== 'audio' && sourceFile) {
+                            convertToProRes(sourceFile, effectiveFfmpegPath, onProgress, (proresFile) => {
+                                const finalFile = proresFile || sourceFile;
+                                if (onComplete) onComplete(finalFile);
+                                resolve(finalFile);
+                            });
+                        } else if (codec === 'h264' && format !== 'audio' && sourceFile) {
+                            ensureH264(sourceFile, effectiveFfmpegPath, onProgress, (h264File, conversionError) => {
+                                if (conversionError) {
+                                    if (onError) onError(conversionError);
+                                    reject(conversionError);
+                                    return;
+                                }
 
-                    // Apply the selected delivery codec after downloading the best source quality.
-                    if (codec === 'prores' && format !== 'audio' && downloadedFile) {
-                        convertToProRes(downloadedFile, effectiveFfmpegPath, onProgress, (proresFile) => {
-                            const finalFile = proresFile || downloadedFile;
-                            if (onComplete) onComplete(finalFile);
-                            resolve(finalFile);
-                        });
-                    } else if (codec === 'h264' && format !== 'audio' && downloadedFile) {
-                        ensureH264(downloadedFile, effectiveFfmpegPath, onProgress, (h264File, conversionError) => {
-                            if (conversionError) {
-                                if (onError) onError(conversionError);
-                                reject(conversionError);
+                                const finalFile = h264File || sourceFile;
+                                if (onComplete) onComplete(finalFile);
+                                resolve(finalFile);
+                            });
+                        } else {
+                            if (onComplete) onComplete(sourceFile);
+                            resolve(sourceFile);
+                        }
+                    };
+
+                    if (timeRangeFallbackMode && hasTimeRange && downloadedFile) {
+                        trimVideo(downloadedFile, startTime, endTime, effectiveFfmpegPath, onProgress, (trimmedFile, trimError) => {
+                            if (trimError || !trimmedFile) {
+                                const error = trimError || new Error('Time range fallback trim failed.');
+                                if (onError) onError(error);
+                                reject(error);
                                 return;
                             }
 
-                            const finalFile = h264File || downloadedFile;
-                            if (onComplete) onComplete(finalFile);
-                            resolve(finalFile);
+                            finalizeDownloadedFile(trimmedFile);
                         });
                     } else {
-                        if (onComplete) onComplete(downloadedFile);
-                        resolve(downloadedFile);
+                        // Regular time-range downloads are already clipped by yt-dlp through --download-sections.
+                        finalizeDownloadedFile(downloadedFile);
                     }
                 } else {
                     if (shouldRetryWithoutCookies(errorBuffer, outputBuffer, effectiveCookieBrowser)) {
@@ -434,6 +579,7 @@ async function downloadVideo(options) {
 
             // Handle errors
             ytDlp.on('error', (err) => {
+                stopTimeRangeMonitor();
                 console.error('yt-dlp error:', err);
                 if (onError) onError(err);
                 reject(err);
@@ -630,47 +776,70 @@ function getVideoFormatSelector(videoQuality = 'max', deliveryCodec = 'h264') {
     return `bestvideo${heightFilter}[dynamic_range=SDR]+bestaudio/bestvideo${heightFilter}+bestaudio/best${heightFilter}`;
 }
 
+function getTimeRangeOutputPath(inputFile) {
+    // // Keep the locally trimmed fallback separate from the full temporary download.
+    const ext = path.extname(inputFile);
+    const basename = path.basename(inputFile, ext);
+    const dirname = path.dirname(inputFile);
+    let counter = 1;
+    let outputFile = path.join(dirname, `${basename} [Range]${ext}`);
+
+    while (fs.existsSync(outputFile)) {
+        counter += 1;
+        outputFile = path.join(dirname, `${basename} [Range] ${counter}${ext}`);
+    }
+
+    return outputFile;
+}
+
 /**
  * Trim video using ffmpeg
  */
-function trimVideo(inputFile, startTime, endTime, callback) {
+function trimVideo(inputFile, startTime, endTime, customFfmpegPath, onProgress, callback) {
     try {
-        const ext = path.extname(inputFile);
-        const basename = path.basename(inputFile, ext);
-        const dirname = path.dirname(inputFile);
-        const outputFile = path.join(dirname, `${basename}_trimmed${ext}`);
+        if (typeof customFfmpegPath === 'function') {
+            callback = customFfmpegPath;
+            customFfmpegPath = null;
+            onProgress = null;
+        } else if (typeof onProgress === 'function' && typeof callback !== 'function') {
+            callback = onProgress;
+            onProgress = null;
+        }
 
         const duration = endTime - startTime;
+        const outputFile = getTimeRangeOutputPath(inputFile);
+        const ffmpegPath = resolveFfmpegPath(customFfmpegPath);
+
+        if (onProgress) {
+            onProgress({
+                progress: 92,
+                status: 'trimmingTimeRange'
+            });
+        }
 
         const args = [
-            '-i', inputFile,
+            // Seek before input so the full-download fallback does not crawl through the whole video.
             '-ss', startTime.toString(),
+            '-i', inputFile,
             '-t', duration.toString(),
+            '-map', '0',
             '-c', 'copy',
+            '-avoid_negative_ts', 'make_zero',
             '-y',
             outputFile
         ];
 
         console.log('Executing ffmpeg with args:', args);
-
-        // Determine ffmpeg executable path based on platform
-        let ffmpegPath = 'ffmpeg';
-        if (os.platform() === 'darwin') {
-            const macPaths = [
-                '/opt/homebrew/bin/ffmpeg',  // Apple Silicon Homebrew
-                '/usr/local/bin/ffmpeg',      // Intel Homebrew
-                '/usr/bin/ffmpeg'             // System install
-            ];
-            for (const p of macPaths) {
-                if (fs.existsSync(p)) {
-                    ffmpegPath = p;
-                    break;
-                }
-            }
-        }
         console.log('Using ffmpeg path:', ffmpegPath);
 
-        const ffmpeg = spawn(ffmpegPath, args, { shell: false });
+        const ffmpeg = spawn(ffmpegPath, args, {
+            shell: false,
+            windowsHide: true
+        });
+
+        ffmpeg.stderr.on('data', (data) => {
+            console.log('ffmpeg time-range trim:', data.toString());
+        });
 
         ffmpeg.on('close', (code) => {
             if (code === 0 && fs.existsSync(outputFile)) {
@@ -679,21 +848,22 @@ function trimVideo(inputFile, startTime, endTime, callback) {
                 } catch (e) {
                     console.error('Error deleting original file:', e);
                 }
-                callback(outputFile);
+                callback(outputFile, null);
             } else {
-                console.error('ffmpeg trimming failed');
-                callback(null);
+                const error = new Error(`ffmpeg trimming failed with code ${code}`);
+                console.error(error.message);
+                callback(null, error);
             }
         });
 
         ffmpeg.on('error', (err) => {
             console.error('ffmpeg error:', err);
-            callback(null);
+            callback(null, err);
         });
 
     } catch (error) {
         console.error('Trim error:', error);
-        callback(null);
+        callback(null, error);
     }
 }
 
@@ -1358,6 +1528,7 @@ module.exports = {
     getPrivateRuntimeConfig,
     resolveYtDlpCommand,
     shouldRetryWithoutCookies,
+    hasValidTimeRange,
     buildYtDlpArgs,
     getVideoFormatSelector,
     normalizeVideoQuality,

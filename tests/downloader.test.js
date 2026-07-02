@@ -10,6 +10,7 @@ const {
     getPrivateRuntimeConfig,
     resolveYtDlpCommand,
     shouldRetryWithoutCookies,
+    hasValidTimeRange,
     buildYtDlpArgs
 } = require('../client/js/downloader');
 
@@ -59,6 +60,9 @@ assert.strictEqual(findLatestFile(scanDirectory), realDownload);
 assert.strictEqual(shouldRetryWithoutCookies('', '', 'firefox'), true);
 assert.strictEqual(shouldRetryWithoutCookies('', '', 'none'), false);
 assert.strictEqual(shouldRetryWithoutCookies('ERROR: [WinError 2] The system cannot find the file specified', '', 'firefox'), false);
+assert.strictEqual(hasValidTimeRange(1440, 1510), true);
+assert.strictEqual(hasValidTimeRange(1510, 1440), false);
+assert.strictEqual(hasValidTimeRange(undefined, 1510), false);
 
 const h264DownloadArgs = buildYtDlpArgs(
     'https://www.youtube.com/watch?v=example',
@@ -74,6 +78,21 @@ const h264DownloadArgs = buildYtDlpArgs(
 );
 assert.strictEqual(h264DownloadArgs.includes('--merge-output-format'), false);
 assert.strictEqual(h264DownloadArgs.includes('--embed-metadata'), false);
+
+const timeRangeArgs = buildYtDlpArgs(
+    'https://www.youtube.com/watch?v=example',
+    'both',
+    outputDirectory,
+    1440,
+    1510,
+    path.join(outputDirectory, 'ffmpeg.exe'),
+    'none',
+    'max',
+    'wav',
+    'h264'
+);
+assert.strictEqual(timeRangeArgs.includes('--download-sections'), true);
+assert.strictEqual(timeRangeArgs[timeRangeArgs.indexOf('--download-sections') + 1], '*00:24:00-00:25:10');
 
 if (os.platform() === 'win32') {
     // // A Windows EXE install must work even if the installer config.json is missing.

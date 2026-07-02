@@ -20,7 +20,7 @@ Download YouTube videos directly into your Adobe Premiere Pro project.
 - ✅ Relative or absolute path support
 - ✅ Multi-language support (English/French)
 
-*> **Note**: Time range downloads are slower than full downloads. This is a YouTube limitation—the video must be streamed and processed in near real-time rather than downloaded directly.
+*> **Note**: Time range downloads are slower than full downloads. If YouTube's section download stalls, the extension now retries by downloading normally and trimming the selected range locally.
 
 ---
 
@@ -238,6 +238,9 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 ---
 
 ## 📝 Changelog
+
+### Version 2.7.15 - 2026-07-02
+- **Fix**: Time range downloads now detect stalls and retry with a local trim fallback instead of staying stuck without progress.
 
 ### Version 2.7.14 - 2026-06-25
 - **Fix**: The macOS PKG runtime now launches yt-dlp through its bundled Python, preventing installation failures caused by a non-portable yt-dlp launcher.
