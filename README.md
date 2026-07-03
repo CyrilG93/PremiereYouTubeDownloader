@@ -125,6 +125,8 @@ This checks the private runtime installed by the PKG, updates yt-dlp and Deno wh
 6. Click **Download**
 7. Video automatically imports into your project!
 
+Click the version badge in the header to open the YouTube Downloader product page.
+
 > [!IMPORTANT]
 > **4K downloads take longer to finish.** YouTube commonly provides 1440p and 4K only as VP9 or AV1. When H.264 is selected, the extension first downloads the high-quality source, then FFmpeg re-encodes the complete video to an H.264 file compatible with Premiere Pro. This conversion uses the processor heavily and can take as long as, or longer than, the download itself. Keep Premiere Pro and the extension open until finalization is complete. Converted files use the suffix `[H264]` so Premiere does not confuse them with the temporary YouTube source.
 

@@ -69,7 +69,7 @@ console.error = function (...args) {
     addLog(args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' '), 'error');
 };
 
-console.log("YouTube Downloader v2.7.17 - Serverless Mode Initialized");
+console.log("YouTube Downloader v2.7.18 - Serverless Mode Initialized");
 
 if (toggleLogsBtn) {
     toggleLogsBtn.addEventListener('click', () => {
@@ -972,6 +972,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize i18n first
     i18n.init();
     initLanguageDropdown();
+    initVersionLink();
     updateLogsToggleLabel();
     renderEstimatedSize();
 
@@ -984,7 +985,38 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================================================
 
 const GITHUB_REPO = 'CyrilG93/PremiereYouTubeDownloader';
-let CURRENT_VERSION = '2.7.17';
+const PRODUCT_PAGE_URL = 'https://www.cyrilplugin.com/youtube-downloader';
+let CURRENT_VERSION = '2.7.18';
+
+function openExternalUrl(url) {
+    // Open external product and update URLs through CEP when the panel runs inside Premiere.
+    try {
+        const hasCepBrowser = typeof cep !== 'undefined' || (typeof window !== 'undefined' && window.cep);
+        if (hasCepBrowser && csInterface && typeof csInterface.openURLInDefaultBrowser === 'function') {
+            csInterface.openURLInDefaultBrowser(url);
+            return;
+        }
+    } catch (e) {
+        console.error('[Link] Error opening URL through CEP:', e);
+    }
+
+    // Fall back to regular browser navigation when testing the panel outside Premiere.
+    try {
+        const popup = window.open(url, '_blank');
+        if (!popup) {
+            window.location.href = url;
+        }
+    } catch (e) {
+        console.error('[Link] Browser fallback failed:', e);
+    }
+}
+
+function initVersionLink() {
+    // Make the header version badge open the public product page.
+    const versionBadge = document.getElementById('mainVersionInfo');
+    if (!versionBadge) return;
+    versionBadge.addEventListener('click', () => openExternalUrl(PRODUCT_PAGE_URL));
+}
 
 /**
  * Compare two version strings (e.g. "1.0.0" vs "1.0.1")
@@ -1037,6 +1069,7 @@ async function checkForUpdates() {
     const versionBadge = document.getElementById('mainVersionInfo');
     if (versionBadge) {
         versionBadge.textContent = 'v' + localVersion;
+        versionBadge.setAttribute('aria-label', `Open YouTube Downloader page for version ${localVersion}`);
     }
 
     try {
@@ -1115,17 +1148,7 @@ function showUpdateBanner(downloadUrl, latestVersion) {
         banner.style.display = 'block';
         banner.onclick = function () {
             if (downloadUrl) {
-                try {
-                    csInterface.openURLInDefaultBrowser(downloadUrl);
-                } catch (e) {
-                    console.error('[Update] Error opening URL:', e);
-                    // Fallback
-                    try {
-                        window.location.href = downloadUrl;
-                    } catch (e2) {
-                        console.error('[Update] Fallback failed:', e2);
-                    }
-                }
+                openExternalUrl(downloadUrl);
             }
         };
     }

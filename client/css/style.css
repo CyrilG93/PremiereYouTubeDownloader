@@ -1249,11 +1249,15 @@ input[type="text"]:not(:placeholder-shown)~.clear-btn {
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid var(--border-color);
     color: var(--text-secondary);
+    cursor: pointer;
+    font-family: inherit;
     font-size: 11px;
+    line-height: 1.2;
     padding: 2px 8px;
     border-radius: 12px;
     margin-left: 8px;
     font-weight: 500;
+    transition: var(--transition);
 }
 
 .header-version {
@@ -1261,4 +1265,11 @@ input[type="text"]:not(:placeholder-shown)~.clear-btn {
     background: rgba(255, 0, 0, 0.12);
     border-color: rgba(255, 0, 0, 0.35);
     color: var(--text-primary);
+}
+
+.header-version:hover,
+.header-version:focus {
+    background: rgba(255, 0, 0, 0.24);
+    border-color: rgba(255, 0, 0, 0.65);
+    outline: none;
 }
