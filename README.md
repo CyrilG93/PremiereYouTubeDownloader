@@ -115,6 +115,18 @@ This checks the private runtime installed by the PKG, updates yt-dlp and Deno wh
 
 ---
 
+## ⚡ Quick Local Windows Update
+
+To test panel changes without rebuilding the `.exe`, run:
+
+```powershell
+npm.cmd run update:local:windows
+```
+
+You can also double-click `UPDATE_LOCAL_WINDOWS.bat`. Restart Premiere Pro after the copy.
+
+---
+
 ## 🎬 Usage
 
 1. Open Adobe Premiere Pro

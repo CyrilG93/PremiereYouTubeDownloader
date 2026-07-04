@@ -7,6 +7,7 @@
     "test": "node tests/downloader.test.js",
     "lint": "node --check client/js/downloader.js && node --check client/js/main.js && node --check client/js/i18n.js",
     "verify": "npm run lint && npm test",
+    "update:local:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/youtubedownloader-update-local-windows.ps1",
     "package:macos-pkg": "node scripts/youtubedownloader-package-macos-pkg.mjs",
     "package:windows-exe": "node scripts/youtubedownloader-package-windows-exe.mjs"
   }
