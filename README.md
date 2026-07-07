@@ -116,6 +116,18 @@ This checks the private runtime installed by the PKG, updates yt-dlp and Deno wh
 
 ---
 
+## ⚡ Quick Local macOS Update
+
+To test panel changes without rebuilding the `.pkg`, run:
+
+```bash
+npm run update:local:macos
+```
+
+You can also run `UPDATE_LOCAL_MACOS.sh` from Terminal. Restart Premiere Pro after the copy.
+
+---
+
 ## ⚡ Quick Local Windows Update
 
 To test panel changes without rebuilding the `.exe`, run:
