@@ -1049,7 +1049,7 @@ input[type="text"]:not(:placeholder-shown)~.clear-btn {
 
 .logs-container {
     display: none;
-    background: #000;
+    background: var(--bg-primary);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-sm);
     padding: 0.5rem;
@@ -1058,7 +1058,7 @@ input[type="text"]:not(:placeholder-shown)~.clear-btn {
     overflow-y: auto;
     font-family: monospace;
     font-size: 0.75rem;
-    color: #ccc;
+    color: var(--text-secondary);
     white-space: pre-wrap;
     word-break: break-all;
 }
@@ -1069,7 +1069,7 @@ input[type="text"]:not(:placeholder-shown)~.clear-btn {
 
 .log-entry {
     margin-bottom: 2px;
-    border-bottom: 1px solid #222;
+    border-bottom: 1px solid var(--border-color);
     padding-bottom: 2px;
 }
 

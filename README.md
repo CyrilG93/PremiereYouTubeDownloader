@@ -19,6 +19,7 @@ Download YouTube videos directly into your Adobe Premiere Pro project.
 - ✅ Auto-import into project bins
 - ✅ Relative or absolute path support
 - ✅ Multi-language support (English/French)
+- ✅ Panel colors follow the current Premiere Pro appearance
 
 *> **Note**: Time range downloads are slower than full downloads. If YouTube's section download stalls, the extension now retries by downloading normally and trimming the selected range locally.
 

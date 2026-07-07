@@ -69,7 +69,7 @@ console.error = function (...args) {
     addLog(args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' '), 'error');
 };
 
-console.log("YouTube Downloader v2.7.18 - Serverless Mode Initialized");
+console.log("YouTube Downloader v2.7.19 - Serverless Mode Initialized");
 
 if (toggleLogsBtn) {
     toggleLogsBtn.addEventListener('click', () => {
@@ -136,6 +136,97 @@ let lastEstimatedBytes = null;
 let estimateDebounceTimer = null;
 let estimateRequestId = 0;
 let availableUpdateVersion = null;
+const CEP_THEME_COLOR_CHANGED_EVENT = 'com.adobe.csxs.events.ThemeColorChanged';
+let premiereThemeListenerBound = false;
+
+// Clamp Adobe CEP RGB values before publishing them as CSS variables.
+function clampColorChannel(value) {
+    return Math.max(0, Math.min(255, Math.round(Number(value) || 0)));
+}
+
+// Read a CEP UIColor object in both direct and nested `.color` shapes.
+function normalizeCepColor(color) {
+    const source = color && color.color ? color.color : color;
+    if (!source) {
+        return { red: 26, green: 26, blue: 26 };
+    }
+    return {
+        red: clampColorChannel(source.red),
+        green: clampColorChannel(source.green),
+        blue: clampColorChannel(source.blue)
+    };
+}
+
+// Convert an RGB object to a CSS rgb() string.
+function colorToRgb(color) {
+    return `rgb(${color.red}, ${color.green}, ${color.blue})`;
+}
+
+// Lighten or darken a color while keeping it in the valid RGB range.
+function shiftColor(color, amount) {
+    const factor = Math.abs(amount);
+    return {
+        red: clampColorChannel(amount >= 0 ? color.red + (255 - color.red) * factor : color.red * (1 - factor)),
+        green: clampColorChannel(amount >= 0 ? color.green + (255 - color.green) * factor : color.green * (1 - factor)),
+        blue: clampColorChannel(amount >= 0 ? color.blue + (255 - color.blue) * factor : color.blue * (1 - factor))
+    };
+}
+
+// Estimate brightness so the generated text colors stay readable in light and dark Premiere themes.
+function colorLuminance(color) {
+    return (0.2126 * color.red + 0.7152 * color.green + 0.0722 * color.blue) / 255;
+}
+
+// Read Premiere's current panel background color from CEP.
+function getPremierePanelColor() {
+    try {
+        if (window.__adobe_cep__ && typeof window.__adobe_cep__.getHostEnvironment === 'function') {
+            const hostEnvironment = JSON.parse(window.__adobe_cep__.getHostEnvironment());
+            if (hostEnvironment && hostEnvironment.appSkinInfo && hostEnvironment.appSkinInfo.panelBackgroundColor) {
+                return normalizeCepColor(hostEnvironment.appSkinInfo.panelBackgroundColor);
+            }
+        }
+    } catch (e) {
+        console.error('[Theme] Error reading Premiere theme:', e);
+    }
+    return normalizeCepColor(null);
+}
+
+// Publish Premiere theme colors through the existing YouTube Downloader CSS variables.
+function applyPremierePanelTheme() {
+    const background = getPremierePanelColor();
+    const isLightTheme = colorLuminance(background) > 0.55;
+    const secondary = shiftColor(background, isLightTheme ? -0.06 : 0.10);
+    const tertiary = shiftColor(background, isLightTheme ? -0.12 : 0.18);
+    const hover = shiftColor(background, isLightTheme ? -0.16 : 0.24);
+    const border = shiftColor(background, isLightTheme ? -0.24 : 0.30);
+    const textPrimary = isLightTheme ? { red: 28, green: 28, blue: 28 } : { red: 245, green: 245, blue: 245 };
+    const textSecondary = isLightTheme ? { red: 82, green: 82, blue: 82 } : { red: 184, green: 184, blue: 184 };
+    const textTertiary = isLightTheme ? { red: 116, green: 116, blue: 116 } : { red: 128, green: 128, blue: 128 };
+    const root = document.documentElement;
+
+    root.setAttribute('data-premiere-theme', isLightTheme ? 'light' : 'dark');
+    root.style.setProperty('--bg-primary', colorToRgb(background));
+    root.style.setProperty('--bg-secondary', colorToRgb(secondary));
+    root.style.setProperty('--bg-tertiary', colorToRgb(tertiary));
+    root.style.setProperty('--bg-hover', colorToRgb(hover));
+    root.style.setProperty('--text-primary', colorToRgb(textPrimary));
+    root.style.setProperty('--text-secondary', colorToRgb(textSecondary));
+    root.style.setProperty('--text-tertiary', colorToRgb(textTertiary));
+    root.style.setProperty('--border-color', colorToRgb(border));
+    root.style.setProperty('--shadow-sm', '0 2px 8px rgba(0, 0, 0, ' + (isLightTheme ? '0.14' : '0.30') + ')');
+    root.style.setProperty('--shadow-md', '0 4px 16px rgba(0, 0, 0, ' + (isLightTheme ? '0.18' : '0.40') + ')');
+    root.style.setProperty('--shadow-lg', '0 8px 32px rgba(0, 0, 0, ' + (isLightTheme ? '0.22' : '0.50') + ')');
+}
+
+// Keep the panel synced when the user changes Premiere's appearance while the CEP panel is open.
+function bindPremiereThemeListener() {
+    if (premiereThemeListenerBound || !csInterface || typeof csInterface.addEventListener !== 'function') {
+        return;
+    }
+    premiereThemeListenerBound = true;
+    csInterface.addEventListener(CEP_THEME_COLOR_CHANGED_EVENT, applyPremierePanelTheme);
+}
 
 // --- SETTINGS STORAGE HELPERS ---
 function getSettingsDir() {
@@ -969,6 +1060,9 @@ cancelBtn.addEventListener('click', () => {
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', () => {
+    applyPremierePanelTheme();
+    bindPremiereThemeListener();
+
     // Initialize i18n first
     i18n.init();
     initLanguageDropdown();
@@ -986,7 +1080,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 const GITHUB_REPO = 'CyrilG93/PremiereYouTubeDownloader';
 const PRODUCT_PAGE_URL = 'https://www.cyrilplugin.com/youtube-downloader';
-let CURRENT_VERSION = '2.7.18';
+let CURRENT_VERSION = '2.7.19';
 
 function openExternalUrl(url) {
     // Open external product and update URLs through CEP when the panel runs inside Premiere.
