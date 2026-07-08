@@ -69,7 +69,7 @@ console.error = function (...args) {
     addLog(args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' '), 'error');
 };
 
-console.log("YouTube Downloader v2.7.20 - Serverless Mode Initialized");
+console.log("YouTube Downloader v2.7.21 - Serverless Mode Initialized");
 
 if (toggleLogsBtn) {
     toggleLogsBtn.addEventListener('click', () => {
@@ -196,10 +196,11 @@ function getPremierePanelColor() {
 function applyPremierePanelTheme() {
     const background = getPremierePanelColor();
     const isLightTheme = colorLuminance(background) > 0.55;
-    const secondary = shiftColor(background, isLightTheme ? -0.06 : 0.10);
-    const tertiary = shiftColor(background, isLightTheme ? -0.12 : 0.18);
-    const hover = shiftColor(background, isLightTheme ? -0.16 : 0.24);
-    const border = shiftColor(background, isLightTheme ? -0.24 : 0.30);
+    // Keep dark-theme controls close to the older charcoal UI while the main panel still follows Premiere.
+    const secondary = shiftColor(background, isLightTheme ? -0.06 : -0.20);
+    const tertiary = shiftColor(background, isLightTheme ? -0.12 : -0.08);
+    const hover = shiftColor(background, isLightTheme ? -0.16 : 0.02);
+    const border = shiftColor(background, isLightTheme ? -0.24 : 0.15);
     const textPrimary = isLightTheme ? { red: 28, green: 28, blue: 28 } : { red: 245, green: 245, blue: 245 };
     const textSecondary = isLightTheme ? { red: 82, green: 82, blue: 82 } : { red: 184, green: 184, blue: 184 };
     const textTertiary = isLightTheme ? { red: 116, green: 116, blue: 116 } : { red: 128, green: 128, blue: 128 };
@@ -1080,7 +1081,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 const GITHUB_REPO = 'CyrilG93/PremiereYouTubeDownloader';
 const PRODUCT_PAGE_URL = 'https://www.cyrilplugin.com/youtube-downloader';
-let CURRENT_VERSION = '2.7.20';
+let CURRENT_VERSION = '2.7.21';
 
 function openExternalUrl(url) {
     // Open external product and update URLs through CEP when the panel runs inside Premiere.
