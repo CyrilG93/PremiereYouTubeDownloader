@@ -1,0 +1,50 @@
+name: Build Windows 2.7.22
+
+on:
+  # // Run this isolated packaging workflow only from its dedicated build branch.
+  push:
+    branches:
+      - build/windows-2.7.22
+
+jobs:
+  build-full-installer:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install project metadata
+        run: npm ci
+
+      - name: Build Full Windows installer
+        # // Rebuild the complete private runtime so the EXE contains yt-dlp, Deno, FFmpeg, and Python.
+        env:
+          YTDL_WINDOWS_REBUILD_RUNTIME: "1"
+          YTDL_WINDOWS_FULL_ONLY: "1"
+        run: npm run package:windows-exe
+
+      - name: Validate installer output
+        shell: pwsh
+        run: |
+          # // Fail the workflow if Inno Setup did not create the expected versioned Full installer.
+          $installer = "Releases/PremiereYouTubeDownloader-v2.7.22-Windows-Full-Installer.exe"
+          if (-not (Test-Path -LiteralPath $installer -PathType Leaf)) {
+            throw "Missing installer: $installer"
+          }
+          Get-Item -LiteralPath $installer | Format-List FullName, Length, LastWriteTimeUtc
+          Get-FileHash -LiteralPath $installer -Algorithm SHA256 | Format-List
+
+      - name: Upload Full installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: PremiereYouTubeDownloader-v2.7.22-Windows-Full-Installer
+          path: Releases/PremiereYouTubeDownloader-v2.7.22-Windows-Full-Installer.exe
+          if-no-files-found: error
+          compression-level: 0
