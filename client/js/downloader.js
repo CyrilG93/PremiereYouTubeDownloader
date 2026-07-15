@@ -5,6 +5,8 @@ const os = require('os');
 
 const TIME_RANGE_HEARTBEAT_MS = 30000;
 const TIME_RANGE_STALL_FALLBACK_MS = 180000;
+const YTDLP_PROGRESS_PREFIX = '__YTDLP_PROGRESS__';
+const YTDLP_FILE_PREFIX = '__YTDLP_FILE__';
 
 function fileExists(filePath) {
     // // Check optional tool paths without throwing when a folder is blocked or missing.
@@ -150,6 +152,55 @@ function resolveYtDlpCommand(customYtdlpPath, autoConfig) {
     return { command: ytDlpPath, baseArgs: [], displayPath: ytDlpPath };
 }
 
+function resolveDenoPath(customDenoPath, autoConfig = {}) {
+    // // Prefer exact user and installer paths so yt-dlp does not depend on CEP inheriting a complete shell PATH.
+    const candidates = [customDenoPath, autoConfig.denoPath];
+    if (os.platform() === 'win32') {
+        candidates.push(
+            path.join(os.homedir(), '.deno', 'bin', 'deno.exe'),
+            path.join(os.homedir(), 'AppData', 'Local', 'Microsoft', 'WindowsApps', 'deno.exe')
+        );
+    } else {
+        candidates.push(
+            path.join(os.homedir(), '.deno', 'bin', 'deno'),
+            '/opt/homebrew/bin/deno',
+            '/usr/local/bin/deno'
+        );
+    }
+
+    return candidates.find(candidate => fileExists(candidate)) || null;
+}
+
+function appendYtDlpJavascriptArgs(args, denoPath) {
+    // // Bind yt-dlp to the packaged Deno runtime and retain the official EJS fallback for changing YouTube challenges.
+    if (denoPath) {
+        args.push('--js-runtimes', `deno:${denoPath}`);
+    }
+    args.push('--remote-components', 'ejs:github');
+}
+
+function parseYtDlpProgressPercent(output) {
+    // // Parse only the marker emitted by our progress template so unrelated percentages cannot move the UI.
+    const matches = String(output || '').match(new RegExp(`${YTDLP_PROGRESS_PREFIX}\\s*(\\d+(?:\\.\\d+)?)%?`, 'g'));
+    if (!matches || matches.length === 0) return null;
+    const valueMatch = matches[matches.length - 1].match(/(\d+(?:\.\d+)?)/);
+    const value = valueMatch ? Number.parseFloat(valueMatch[1]) : NaN;
+    return Number.isFinite(value) ? value : null;
+}
+
+function parseYtDlpFinalPath(output) {
+    // // Read the last after_move marker because it contains the exact path after merging and post-processing.
+    const lines = String(output || '').split(/\r?\n/);
+    for (let index = lines.length - 1; index >= 0; index -= 1) {
+        const markerIndex = lines[index].indexOf(YTDLP_FILE_PREFIX);
+        if (markerIndex >= 0) {
+            const filePath = lines[index].slice(markerIndex + YTDLP_FILE_PREFIX.length).trim();
+            if (filePath) return filePath;
+        }
+    }
+    return null;
+}
+
 function shouldUseCookieBrowser(cookieBrowser) {
     // // Allow retry paths and future UI choices to disable browser cookie extraction explicitly.
     const normalized = String(cookieBrowser || '').trim().toLowerCase();
@@ -291,6 +342,7 @@ async function downloadVideo(options) {
             const ytDlpStartTime = timeRangeFallbackMode ? undefined : startTime;
             const ytDlpEndTime = timeRangeFallbackMode ? undefined : endTime;
             const ytDlpCommand = resolveYtDlpCommand(customYtdlpPath, autoConfig);
+            const effectiveDenoPath = resolveDenoPath(customDenoPath, autoConfig);
             const args = ytDlpCommand.baseArgs.concat(buildYtDlpArgs(
                 url,
                 format,
@@ -301,7 +353,8 @@ async function downloadVideo(options) {
                 effectiveCookieBrowser,
                 videoQuality,
                 audioFormat,
-                codec
+                codec,
+                effectiveDenoPath
             ));
 
             console.log('Executing yt-dlp with args:', args);
@@ -338,6 +391,8 @@ async function downloadVideo(options) {
                 // On macOS/Linux, also ensure common paths are present
                 const userHome = os.homedir();
                 const additionalPaths = [
+                    customDenoPath ? path.dirname(customDenoPath) : null,
+                    autoConfig.denoPath ? path.dirname(autoConfig.denoPath) : null,
                     '/opt/homebrew/bin',
                     '/usr/local/bin',
                     path.join(userHome, '.deno', 'bin'),
@@ -447,9 +502,10 @@ async function downloadVideo(options) {
                 console.log('yt-dlp stdout:', output);
 
                 // Parse progress
-                const progressMatch = output.match(/(\d+\.?\d*)%/);
-                if (progressMatch) {
-                    const percent = parseFloat(progressMatch[1]);
+                const structuredPercent = parseYtDlpProgressPercent(output);
+                const progressMatch = structuredPercent === null ? output.match(/(\d+\.?\d*)%/) : null;
+                if (structuredPercent !== null || progressMatch) {
+                    const percent = structuredPercent === null ? parseFloat(progressMatch[1]) : structuredPercent;
                     currentProgress = percent;
                     if (onProgress) {
                         onProgress({
@@ -528,6 +584,14 @@ async function downloadVideo(options) {
             ytDlp.on('close', (code) => {
                 stopTimeRangeMonitor();
                 console.log(`yt-dlp exited with code ${code}`);
+
+                const structuredFinalPath = parseYtDlpFinalPath(outputBuffer);
+                if (structuredFinalPath) {
+                    downloadedFile = path.isAbsolute(structuredFinalPath)
+                        ? structuredFinalPath
+                        : path.join(destination, structuredFinalPath);
+                    console.log(`Structured final file detected: ${downloadedFile}`);
+                }
 
                 if (signal && signal.aborted) {
                     return;
@@ -634,7 +698,7 @@ async function downloadVideo(options) {
 /**
  * Build yt-dlp command arguments
  */
-function buildYtDlpArgs(url, format, destination, startTime, endTime, customFfmpegPath, cookieBrowser = 'firefox', videoQuality = 'max', audioFormat = 'wav', deliveryCodec = 'h264') {
+function buildYtDlpArgs(url, format, destination, startTime, endTime, customFfmpegPath, cookieBrowser = 'firefox', videoQuality = 'max', audioFormat = 'wav', deliveryCodec = 'h264', denoPath = null) {
     const args = [url];
 
     // Determine ffmpeg path for yt-dlp post-processing
@@ -710,17 +774,19 @@ function buildYtDlpArgs(url, format, destination, startTime, endTime, customFfmp
     // Restrict filenames to Windows-safe characters only (allows Unicode)
     args.push('--windows-filenames');
 
-    // Progress
+    // Emit machine-readable progress and the exact final file while retaining readable logs for troubleshooting.
     args.push('--newline');
     args.push('--progress');
+    args.push('--color', 'never');
+    args.push('--progress-template', `download:${YTDLP_PROGRESS_PREFIX}%(progress._percent_str)s`);
+    args.push('--print', `after_move:${YTDLP_FILE_PREFIX}%(filepath)s`);
+    args.push('--no-quiet');
 
     // No playlist
     args.push('--no-playlist');
 
-    // Enable remote EJS scripts for YouTube n-challenge solving
-    // This downloads solver scripts from GitHub automatically
-    args.push('--remote-components', 'ejs:github');
-
+    // Enable the exact private Deno runtime and official EJS challenge fallback.
+    appendYtDlpJavascriptArgs(args, denoPath);
     if (format === 'audio' || deliveryCodec === 'passthrough') {
         // // Keep metadata only when yt-dlp's postprocessed file is the final user-facing output.
         args.push('--embed-metadata');
@@ -730,9 +796,6 @@ function buildYtDlpArgs(url, format, destination, startTime, endTime, customFfmp
         // Use cookies from browser to bypass SABR restrictions when that browser is available.
         args.push('--cookies-from-browser', cookieBrowser);
     }
-
-    // Ignore errors
-    args.push('--ignore-errors');
 
     // Skip SSL certificate verification (for corporate networks/VPNs with self-signed certs)
     args.push('--no-check-certificate');
@@ -1319,6 +1382,7 @@ async function estimateDownloadSize(options) {
         try {
             const effectiveFfmpegPath = customFfmpegPath || autoConfig.ffmpegPath || null;
             const ytDlpCommand = resolveYtDlpCommand(customYtdlpPath, autoConfig);
+            const effectiveDenoPath = resolveDenoPath(customDenoPath, autoConfig);
 
             const customEnv = { ...process.env };
             if (os.platform() === 'win32') {
@@ -1340,6 +1404,8 @@ async function estimateDownloadSize(options) {
             } else if (os.platform() === 'darwin' || os.platform() === 'linux') {
                 const userHome = os.homedir();
                 const additionalPaths = [
+                    customDenoPath ? path.dirname(customDenoPath) : null,
+                    autoConfig.denoPath ? path.dirname(autoConfig.denoPath) : null,
                     '/opt/homebrew/bin',
                     '/usr/local/bin',
                     path.join(userHome, '.deno', 'bin'),
@@ -1375,10 +1441,10 @@ async function estimateDownloadSize(options) {
             args.push('--dump-single-json');
             args.push('--skip-download');
             args.push('--no-playlist');
+            appendYtDlpJavascriptArgs(args, effectiveDenoPath);
             if (shouldUseCookieBrowser(cookieBrowser)) {
                 args.push('--cookies-from-browser', cookieBrowser);
             }
-            args.push('--ignore-errors');
             args.push('--no-check-certificate');
 
             if (startTime !== undefined && endTime !== undefined) {
@@ -1565,6 +1631,9 @@ module.exports = {
     // Exported for focused regression tests without exposing these helpers in the panel UI.
     getPrivateRuntimeConfig,
     resolveYtDlpCommand,
+    resolveDenoPath,
+    parseYtDlpProgressPercent,
+    parseYtDlpFinalPath,
     shouldRetryWithoutCookies,
     hasValidTimeRange,
     validateTimeRangeAgainstDuration,

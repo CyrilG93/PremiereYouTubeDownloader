@@ -149,7 +149,13 @@ if (-not $DryRun) {
 Copy-YtdlFolderContents -Source $clientSource -Target (Join-Path $Destination "client")
 Copy-YtdlFolderContents -Source $hostSource -Target (Join-Path $Destination "host")
 Copy-YtdlFolderContents -Source $csxsSource -Target (Join-Path $Destination "CSXS")
-foreach ($fileName in @(".debug", "README.md", "INSTALLATION_GUIDE.md", "UPDATE_DEPENDENCIES.bat")) {
+foreach ($fileName in @(
+  ".debug",
+  "README.md",
+  "INSTALLATION_GUIDE.md",
+  "UPDATE_DEPENDENCIES.bat",
+  "UPDATE_DEPENDENCIES_WINDOWS.ps1"
+)) {
   Copy-YtdlOptionalFile $fileName
 }
 Write-YtdlRuntimeConfigIfNeeded

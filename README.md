@@ -241,16 +241,13 @@ brew install ffmpeg
 This error means yt-dlp can't solve YouTube's JavaScript challenges. Fix:
 
 1. Install Deno: Run the installer again, or manually install from https://deno.land/
-2. Update yt-dlp with EJS support:
-   ```bash
-   pip install --upgrade "yt-dlp[default]"
-   ```
+2. Run the dependency updater included with the extension: `UPDATE_DEPENDENCIES.bat` on Windows or `UPDATE_DEPENDENCIES.sh` on macOS.
 3. If auto-detection fails, configure custom paths in **Settings → Advanced Tools**
 
 ### Download fails or no audio
 
 - Verify ffmpeg is installed: `ffmpeg -version`
-- Update yt-dlp: `pip install --upgrade "yt-dlp[default]"`
+- Run the dependency updater included with the extension, or reinstall the latest Full installer to repair the private runtime.
 - Check the logs in the extension (click "Logs" button)
 
 ### Tools not found (custom paths)

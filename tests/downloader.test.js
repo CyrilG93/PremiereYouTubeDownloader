@@ -9,6 +9,9 @@ const {
     findLatestFile,
     getPrivateRuntimeConfig,
     resolveYtDlpCommand,
+    resolveDenoPath,
+    parseYtDlpProgressPercent,
+    parseYtDlpFinalPath,
     shouldRetryWithoutCookies,
     hasValidTimeRange,
     validateTimeRangeAgainstDuration,
@@ -88,6 +91,36 @@ const h264DownloadArgs = buildYtDlpArgs(
 );
 assert.strictEqual(h264DownloadArgs.includes('--merge-output-format'), false);
 assert.strictEqual(h264DownloadArgs.includes('--embed-metadata'), false);
+assert.strictEqual(h264DownloadArgs.includes('--ignore-errors'), false);
+assert.strictEqual(h264DownloadArgs.includes('--progress-template'), true);
+assert.strictEqual(h264DownloadArgs.includes('--print'), true);
+
+// Structured yt-dlp markers must isolate progress and final paths from human-readable logs.
+assert.strictEqual(parseYtDlpProgressPercent('__YTDLP_PROGRESS__ 42.7%'), 42.7);
+assert.strictEqual(parseYtDlpProgressPercent('[download] 12.0%'), null);
+assert.strictEqual(
+    parseYtDlpFinalPath('log line\n__YTDLP_FILE__/tmp/Example final.mp4\n'),
+    '/tmp/Example final.mp4'
+);
+
+// Explicit Deno paths must be forwarded through yt-dlp's supported JS runtime option.
+const fakeDenoPath = path.join(outputDirectory, os.platform() === 'win32' ? 'deno.exe' : 'deno');
+fs.writeFileSync(fakeDenoPath, '');
+assert.strictEqual(resolveDenoPath(fakeDenoPath, {}), fakeDenoPath);
+const denoDownloadArgs = buildYtDlpArgs(
+    'https://www.youtube.com/watch?v=example',
+    'both',
+    outputDirectory,
+    undefined,
+    undefined,
+    path.join(outputDirectory, 'ffmpeg.exe'),
+    'none',
+    'max',
+    'wav',
+    'h264',
+    fakeDenoPath
+);
+assert.strictEqual(denoDownloadArgs[denoDownloadArgs.indexOf('--js-runtimes') + 1], `deno:${fakeDenoPath}`);
 
 const timeRangeArgs = buildYtDlpArgs(
     'https://www.youtube.com/watch?v=example',

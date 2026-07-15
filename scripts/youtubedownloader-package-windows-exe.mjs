@@ -307,7 +307,13 @@ async function copyExtensionPayload() {
   for (const dirName of ["client", "host", "CSXS"]) {
     await cp(path.join(projectRoot, dirName), path.join(distDir, dirName), { recursive: true });
   }
-  for (const fileName of [".debug", "README.md", "INSTALLATION_GUIDE.md", "UPDATE_DEPENDENCIES.bat"]) {
+  for (const fileName of [
+    ".debug",
+    "README.md",
+    "INSTALLATION_GUIDE.md",
+    "UPDATE_DEPENDENCIES.bat",
+    "UPDATE_DEPENDENCIES_WINDOWS.ps1"
+  ]) {
     const sourcePath = path.join(projectRoot, fileName);
     if (await pathExists(sourcePath)) {
       await cp(sourcePath, path.join(distDir, fileName));

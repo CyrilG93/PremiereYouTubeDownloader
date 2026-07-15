@@ -1,13 +1,13 @@
 @echo off
 :: YouTube Downloader for Premiere Pro - Simple Installer
-:: Version 2.7.21
+:: Version 2.7.22
 
 title YouTube Downloader Installer
 
 echo.
 echo ========================================
 echo YouTube Downloader for Premiere Pro
-echo Installation Package v2.7.21
+echo Installation Package v2.7.22
 echo ========================================
 echo.
 
@@ -234,6 +234,7 @@ if "%SKIP_COPY%"=="0" (
     if exist "%SOURCE_DIR%README.md" copy /Y "%SOURCE_DIR%README.md" "%EXTENSION_PATH%\README.md" >nul
     if exist "%SOURCE_DIR%INSTALLATION_GUIDE.md" copy /Y "%SOURCE_DIR%INSTALLATION_GUIDE.md" "%EXTENSION_PATH%\INSTALLATION_GUIDE.md" >nul
     if exist "%SOURCE_DIR%UPDATE_DEPENDENCIES.bat" copy /Y "%SOURCE_DIR%UPDATE_DEPENDENCIES.bat" "%EXTENSION_PATH%\UPDATE_DEPENDENCIES.bat" >nul
+    if exist "%SOURCE_DIR%UPDATE_DEPENDENCIES_WINDOWS.ps1" copy /Y "%SOURCE_DIR%UPDATE_DEPENDENCIES_WINDOWS.ps1" "%EXTENSION_PATH%\UPDATE_DEPENDENCIES_WINDOWS.ps1" >nul
     
     echo [OK] Extension files installed successfully!
 )

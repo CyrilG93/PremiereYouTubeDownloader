@@ -1,6 +1,6 @@
 {
   "name": "premiere-youtube-downloader",
-  "version": "2.7.21",
+  "version": "2.7.22",
   "private": true,
   "description": "YouTube Downloader - Adobe Premiere Pro CEP extension.",
   "scripts": {
