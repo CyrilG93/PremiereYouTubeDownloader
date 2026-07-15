@@ -263,6 +263,11 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Changelog
 
+### Version 2.7.22 - 2026-07-15
+- **YouTube reliability**: The bundled Deno runtime is now passed directly to yt-dlp, improving JavaScript challenge solving and available-format detection on clean installations.
+- **Download reliability**: Progress and final filenames now use structured yt-dlp output, and failed downloads can no longer be mistaken for successful ones.
+- **Windows maintenance**: The dependency updater now updates the private yt-dlp runtime actually used by the Full installer.
+
 ### Version 2.7.17 - 2026-07-02
 - **UX**: Time range downloads now show a clearer preparation message while YouTube/FFmpeg is getting the selected section ready.
 
