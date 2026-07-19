@@ -1,0 +1,53 @@
+name: Build macOS 2.7.23 ARM64
+
+on:
+  # // Run this isolated validation workflow only from its dedicated build branch.
+  push:
+    branches:
+      - build/macos-2.7.23
+
+jobs:
+  build-full-installer:
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v8
+
+      - name: Install project metadata
+        run: npm ci
+
+      - name: Build ARM64 Full installer
+        # // Rebuild every native dependency and keep the validation package unsigned.
+        env:
+          YTDL_REBUILD_RUNTIME: "1"
+          YTDL_BUILD_JOBS: "4"
+        run: npm run package:macos-pkg
+
+      - name: Validate installer output
+        run: |
+          # // Fail if the ARM64 PKG is missing, empty, or unexpectedly signed.
+          installer="Releases/PremiereYouTubeDownloader-v2.7.23-macOS-Installer-arm64.pkg"
+          test -s "$installer"
+          if pkgutil --check-signature "$installer" 2>&1 | grep -q "Status: signed"; then
+            echo "Validation package must remain unsigned." >&2
+            exit 1
+          fi
+          shasum -a 256 "$installer"
+
+      - name: Upload ARM64 Full installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: PremiereYouTubeDownloader-v2.7.23-macOS-Installer-arm64
+          path: Releases/PremiereYouTubeDownloader-v2.7.23-macOS-Installer-arm64.pkg
+          if-no-files-found: error
+          compression-level: 0
