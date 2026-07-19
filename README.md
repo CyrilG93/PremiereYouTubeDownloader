@@ -67,7 +67,8 @@ This extension needs the following tools installed on your computer:
 ### macOS - Step by Step
 
 **1. Run the PKG installer (recommended)**:
-   - Open `PremiereYouTubeDownloader-vX-macOS-Installer-arm64.pkg` or `PremiereYouTubeDownloader-vX-macOS-Installer-x86_64.pkg`, depending on your Mac.
+   - On an Apple Silicon Mac, open `PremiereYouTubeDownloader-vX-macOS-Installer-arm64.pkg`.
+   - Intel Macs are not supported by the public installer.
    - The installer adds the Premiere extension and a private runtime with Python, yt-dlp, Deno, FFmpeg and FFprobe.
    - No Homebrew setup is required for the recommended PKG installer.
 
@@ -88,6 +89,7 @@ The folder contains several tools to help you if something goes wrong.
 | File | What it does | When to use it? |
 |------|--------------|-----------------|
 | `PremiereYouTubeDownloader-vX-Windows-Full-Installer.exe` | Installs the Windows extension and private runtime in one step. | Recommended Windows installer. |
+| `PremiereYouTubeDownloader-vX-macOS-Installer-arm64.pkg` | Installs the macOS extension and private runtime on Apple Silicon. | Recommended macOS installer. |
 | `INSTALL_WINDOWS.bat` | Legacy Windows installer using system dependencies. | Advanced/manual installs only. |
 | `UPDATE_DEPENDENCIES.bat` | Forces update of all dependencies (yt-dlp, Deno, etc.) to latest versions. | Run regularly to stay up to date. |
 | `UPDATE_DEPENDENCIES.sh` | Checks the macOS PKG private runtime, updates yt-dlp/Deno, and refreshes tool paths. | Use if YouTube downloads start failing after installation. |
@@ -447,6 +449,7 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 - Built for Adobe Premiere Pro CEP
 - Uses [yt-dlp](https://github.com/yt-dlp/yt-dlp) for downloading
 - Uses [ffmpeg](https://ffmpeg.org/) for media processing
+- Uses [Deno](https://deno.com/) for YouTube JavaScript challenge support
 - Powered by Node.js
 
 ---

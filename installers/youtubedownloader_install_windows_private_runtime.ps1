@@ -1,6 +1,5 @@
 param(
   [string]$PayloadRoot = "",
-  [switch]$SkipRuntimeInstall,
   [string]$RuntimeVersion = "1"
 )
 
@@ -29,15 +28,37 @@ function Write-YtdlInfo {
 function Copy-YtdlDirectoryFresh {
   param(
     [string]$Source,
-    [string]$Destination
+    [string]$Destination,
+    [scriptblock]$Validate = $null
   )
 
-  # // Replace the installed extension or runtime folder cleanly for the current Windows user.
-  if (Test-Path -LiteralPath $Destination) {
-    Remove-Item -LiteralPath $Destination -Recurse -Force
+  # // Validate a complete replacement before swapping folders so an interrupted copy keeps the previous install usable.
+  $parentDir = Split-Path -Parent $Destination
+  $replacementDir = "$Destination.new.$PID"
+  $previousDir = "$Destination.old.$PID"
+  New-Item -ItemType Directory -Path $parentDir -Force | Out-Null
+  Remove-Item -LiteralPath $replacementDir -Recurse -Force -ErrorAction SilentlyContinue
+  Remove-Item -LiteralPath $previousDir -Recurse -Force -ErrorAction SilentlyContinue
+  Copy-Item -LiteralPath $Source -Destination $replacementDir -Recurse -Force
+
+  try {
+    if ($Validate) {
+      & $Validate $replacementDir
+    }
+    if (Test-Path -LiteralPath $Destination) {
+      Move-Item -LiteralPath $Destination -Destination $previousDir
+    }
+    Move-Item -LiteralPath $replacementDir -Destination $Destination
+    Remove-Item -LiteralPath $previousDir -Recurse -Force -ErrorAction SilentlyContinue
+  } catch {
+    # // Restore the previous folder when the final swap fails after it was moved aside.
+    if (-not (Test-Path -LiteralPath $Destination) -and (Test-Path -LiteralPath $previousDir)) {
+      Move-Item -LiteralPath $previousDir -Destination $Destination -ErrorAction SilentlyContinue
+    }
+    throw
+  } finally {
+    Remove-Item -LiteralPath $replacementDir -Recurse -Force -ErrorAction SilentlyContinue
   }
-  New-Item -ItemType Directory -Path (Split-Path -Parent $Destination) -Force | Out-Null
-  Copy-Item -LiteralPath $Source -Destination $Destination -Recurse -Force
 }
 
 function Enable-YtdlCepDebugMode {
@@ -60,21 +81,25 @@ function Enable-YtdlCepDebugMode {
 }
 
 function Install-YtdlPrivateRuntime {
-  # // Copy the packaged private runtime into LocalAppData so the plugin does not depend on system tools.
+  # // Validate and atomically install the packaged runtime into LocalAppData.
   if (-not (Test-Path -LiteralPath $payloadRuntimeDir)) {
     throw "Private runtime payload is missing: $payloadRuntimeDir"
   }
 
-  Copy-YtdlDirectoryFresh -Source $payloadRuntimeDir -Destination $runtimeDir
+  Copy-YtdlDirectoryFresh -Source $payloadRuntimeDir -Destination $runtimeDir -Validate {
+    param([string]$StagedRuntimeDir)
+    Test-YtdlPrivateRuntime -TargetRuntimeDir $StagedRuntimeDir
+  }
   Write-YtdlInfo "Private runtime installed to $runtimeDir."
 }
 
 function Test-YtdlPrivateRuntime {
+  param([string]$TargetRuntimeDir = $runtimeDir)
   # // Validate all private tools before writing their paths to the CEP config file.
-  $pythonPath = Join-Path $runtimeDir "python\python.exe"
-  $ffmpegPath = Join-Path $runtimeDir "ffmpeg\bin\ffmpeg.exe"
-  $ffprobePath = Join-Path $runtimeDir "ffmpeg\bin\ffprobe.exe"
-  $denoPath = Join-Path $runtimeDir "deno\bin\deno.exe"
+  $pythonPath = Join-Path $TargetRuntimeDir "python\python.exe"
+  $ffmpegPath = Join-Path $TargetRuntimeDir "ffmpeg\bin\ffmpeg.exe"
+  $ffprobePath = Join-Path $TargetRuntimeDir "ffmpeg\bin\ffprobe.exe"
+  $denoPath = Join-Path $TargetRuntimeDir "deno\bin\deno.exe"
 
   foreach ($tool in @($pythonPath, $ffmpegPath, $ffprobePath, $denoPath)) {
     if (-not (Test-Path -LiteralPath $tool -PathType Leaf)) {
@@ -144,17 +169,15 @@ if (-not (Test-Path -LiteralPath $sourceDir)) {
 }
 
 Write-YtdlInfo "Installing YouTube Downloader from $PayloadRoot"
+Install-YtdlPrivateRuntime
+Test-YtdlPrivateRuntime
 Copy-YtdlDirectoryFresh -Source $sourceDir -Destination $destDir
 Write-YtdlInfo "YouTube Downloader installed to $destDir."
-Enable-YtdlCepDebugMode
-
-if (-not $SkipRuntimeInstall) {
-  Install-YtdlPrivateRuntime
-} else {
-  Write-YtdlInfo "Keeping the compatible private runtime already installed."
+if ($env:YTDL_SKIP_CEP_DEBUG -ne "1") {
+  # // Allow isolated packaging tests to avoid changing the current user's Adobe registry keys.
+  Enable-YtdlCepDebugMode
 }
 
-Test-YtdlPrivateRuntime
 Write-YtdlRuntimeVersion
 Write-YtdlExtensionConfig
 

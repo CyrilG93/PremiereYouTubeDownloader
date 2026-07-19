@@ -15,7 +15,6 @@ const payloadRoot = path.join(stagingRoot, "payload");
 const runtimeRoot = path.join(payloadRoot, "runtime");
 const installerRoot = path.join(stagingRoot, "installer");
 const releasesDir = path.join(projectRoot, "Releases");
-const runtimeManifestPath = path.join(projectRoot, "installers", "windows-runtime.json");
 const pythonVersion = process.env.YTDL_WINDOWS_PYTHON_VERSION || "3.11.9";
 const pythonShortVersion = pythonVersion.split(".").slice(0, 2).join("");
 const pythonEmbedUrl =
@@ -34,9 +33,6 @@ const innoSetupUrl =
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 const reuseStaging = process.env.YTDL_WINDOWS_REUSE_STAGING === "1";
 const rebuildRuntime = process.env.YTDL_WINDOWS_REBUILD_RUNTIME === "1";
-const skipRuntimeAssetDownload = process.env.YTDL_WINDOWS_SKIP_RUNTIME_ASSET_DOWNLOAD === "1";
-const fullOnly = process.env.YTDL_WINDOWS_FULL_ONLY === "1";
-const lightOnly = process.env.YTDL_WINDOWS_LIGHT_ONLY === "1";
 const privatePythonEnv = {
   PYTHONUTF8: "1",
   PYTHONNOUSERSITE: "1",
@@ -286,6 +282,11 @@ async function prepareDenoRuntime() {
       `Copy-Item -LiteralPath $source.FullName -Destination ${JSON.stringify(path.join(runtimeDenoDir, "deno.exe"))} -Force;`
     ].join(" ")
   ]);
+  // // Ship Deno's MIT notice with every redistributed runtime.
+  await cp(
+    path.join(projectRoot, "installers", "licenses", "DENO_LICENSE.md"),
+    path.join(runtimeRoot, "deno", "LICENSE.md")
+  );
 
   await validateDenoRuntime();
 }
@@ -389,105 +390,43 @@ function escapePascalString(value) {
   return String(value || "").replace(/'/g, "''");
 }
 
-async function readRuntimeManifest() {
-  // // Runtime metadata lets future light installers download an immutable runtime asset.
-  const raw = await readFile(runtimeManifestPath, "utf8");
+async function readPackageVersion() {
+  // // Use package.json as the single version source for Windows installer artifact names.
+  const raw = await readFile(path.join(projectRoot, "package.json"), "utf8");
   const parsed = JSON.parse(raw);
-  return {
-    version: String(parsed.version || "").trim(),
-    releaseTag: String(parsed.releaseTag || "").trim(),
-    assetName: String(parsed.assetName || "").trim(),
-    sha256: String(parsed.sha256 || "").trim().toLowerCase()
-  };
+  return String(parsed.version || "").trim();
 }
 
-async function writeRuntimeManifest(manifest) {
-  // // Persist the first compiled runtime hash so connected installers can verify downloads.
-  await writeFile(runtimeManifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+async function prepareRuntimePayload(version) {
+  // // Build or validate each private dependency before handing the payload to Inno Setup.
+  if (reuseStaging && !rebuildRuntime && (await pathExists(path.join(runtimeRoot, "python", "python.exe")))) {
+    await validatePythonRuntime();
+  } else {
+    await preparePythonRuntime();
+  }
+  if (reuseStaging && !rebuildRuntime && (await pathExists(path.join(runtimeRoot, "ffmpeg", "bin", "ffmpeg.exe")))) {
+    await validateFfmpegRuntime();
+  } else {
+    await prepareFfmpegRuntime();
+  }
+  if (reuseStaging && !rebuildRuntime && (await pathExists(path.join(runtimeRoot, "deno", "bin", "deno.exe")))) {
+    await validateDenoRuntime();
+  } else {
+    await prepareDenoRuntime();
+  }
+  // // Repair reused staging folders that predate the bundled Deno notice.
+  await cp(
+    path.join(projectRoot, "installers", "licenses", "DENO_LICENSE.md"),
+    path.join(runtimeRoot, "deno", "LICENSE.md")
+  );
+  await writeFile(path.join(runtimeRoot, ".youtubedownloader-runtime-version"), `${version}\r\n`, "ascii");
 }
 
-async function createRuntimeInstaller(compilerPath, runtimeManifest) {
-  // // Package the reusable private runtime as a standalone EXE for future lightweight installs.
-  const outputPath = path.join(releasesDir, runtimeManifest.assetName);
-  if (!rebuildRuntime && runtimeManifest.sha256 && (await pathExists(outputPath))) {
-    const localHash = await hashFile(outputPath);
-    if (localHash === runtimeManifest.sha256) {
-      return runtimeManifest;
-    }
-    throw new Error(`Local runtime asset hash does not match ${runtimeManifestPath}.`);
-  }
-
-  if (!rebuildRuntime && runtimeManifest.sha256 && skipRuntimeAssetDownload) {
-    process.stdout.write(`Reusing published Windows runtime metadata for ${runtimeManifest.assetName}.\n`);
-    return runtimeManifest;
-  }
-
-  if (!rebuildRuntime && runtimeManifest.sha256 && !(await pathExists(outputPath))) {
-    const publishedUrl =
-      process.env.YTDL_WINDOWS_RUNTIME_DOWNLOAD_URL ||
-      `https://github.com/CyrilG93/PremiereYouTubeDownloader/releases/download/${runtimeManifest.releaseTag}/${runtimeManifest.assetName}`;
-    await downloadFile(publishedUrl, outputPath);
-    const publishedHash = await hashFile(outputPath);
-    if (publishedHash !== runtimeManifest.sha256) {
-      throw new Error(`Published runtime asset hash does not match ${runtimeManifestPath}.`);
-    }
-    return runtimeManifest;
-  }
-
-  await writeFile(path.join(runtimeRoot, ".youtubedownloader-runtime-version"), `${runtimeManifest.version}\r\n`, "ascii");
-  const scriptPath = path.join(installerRoot, "YouTubeDownloaderRuntime.iss");
-  const runtimeOutputBaseName = path.parse(runtimeManifest.assetName).name;
-  const iss = [
-    "; // Generated by youtubedownloader-package-windows-exe.mjs.",
-    "[Setup]",
-    "AppId={{A2A6A4B2-4D5B-42D9-B193-D29C4F9DF83D}",
-    "AppName=YouTube Downloader Private Runtime",
-    `AppVersion=${runtimeManifest.version}`,
-    "AppPublisher=Cyril Plugin",
-    "DefaultDirName={localappdata}\\PremiereYouTubeDownloader\\runtime",
-    "DisableDirPage=yes",
-    "DisableProgramGroupPage=yes",
-    "Uninstallable=no",
-    "PrivilegesRequired=lowest",
-    "RestartIfNeededByRun=no",
-    "ArchitecturesAllowed=x64compatible",
-    "ArchitecturesInstallIn64BitMode=x64compatible",
-    "Compression=lzma2/ultra64",
-    "SolidCompression=yes",
-    "WizardStyle=modern",
-    `OutputDir=${escapeInnoString(releasesDir)}`,
-    `OutputBaseFilename=${runtimeOutputBaseName}`,
-    "",
-    "[InstallDelete]",
-    'Type: filesandordirs; Name: "{localappdata}\\PremiereYouTubeDownloader\\runtime"',
-    "",
-    "[Files]",
-    `Source: "${escapeInnoString(path.join(runtimeRoot, "*"))}"; DestDir: "{localappdata}\\PremiereYouTubeDownloader\\runtime"; Flags: recursesubdirs createallsubdirs ignoreversion`,
-    ""
-  ].join("\r\n");
-
-  await mkdir(installerRoot, { recursive: true });
-  await mkdir(releasesDir, { recursive: true });
-  await rm(outputPath, { force: true });
-  await writeFile(scriptPath, iss, "utf8");
-  await runCommand(compilerPath, ["/Qp", scriptPath]);
-
-  const sha256 = await hashFile(outputPath);
-  const finalizedManifest = { ...runtimeManifest, sha256 };
-  await writeRuntimeManifest(finalizedManifest);
-  process.stdout.write(`Windows runtime asset created at ${outputPath}\n`);
-  return finalizedManifest;
-}
-
-async function createUserInstaller(compilerPath, version, runtimeManifest, mode) {
-  // // Build either a full installer with embedded runtime or a light installer that downloads it.
-  const includeRuntime = mode === "full";
-  const outputBaseName = `PremiereYouTubeDownloader-v${version}-Windows-${includeRuntime ? "Full" : "Light"}-Installer`;
+async function createFullInstaller(compilerPath, version) {
+  // // Build the only supported Windows artifact with the complete private runtime embedded.
+  const outputBaseName = `PremiereYouTubeDownloader-v${version}-Windows-Full-Installer`;
   const outputPath = path.join(releasesDir, `${outputBaseName}.exe`);
-  const scriptPath = path.join(installerRoot, `YouTubeDownloader${includeRuntime ? "Full" : "Light"}.iss`);
-  const runtimeUrl =
-    process.env.YTDL_WINDOWS_RUNTIME_DOWNLOAD_URL ||
-    `https://github.com/CyrilG93/PremiereYouTubeDownloader/releases/download/${runtimeManifest.releaseTag}/${runtimeManifest.assetName}`;
+  const scriptPath = path.join(installerRoot, "YouTubeDownloaderFull.iss");
   const iss = [
     "; // Generated by youtubedownloader-package-windows-exe.mjs.",
     "[Setup]",
@@ -513,63 +452,29 @@ async function createUserInstaller(compilerPath, version, runtimeManifest, mode)
     "[Files]",
     `Source: "${escapeInnoString(path.join(payloadRoot, "README.md"))}"; DestDir: "{tmp}\\YouTubeDownloaderPayload"; Flags: ignoreversion`,
     `Source: "${escapeInnoString(path.join(payloadRoot, "dist", "PremiereYouTubeDownloader", "*"))}"; DestDir: "{tmp}\\YouTubeDownloaderPayload\\dist\\PremiereYouTubeDownloader"; Flags: recursesubdirs createallsubdirs ignoreversion`,
-    `Source: "${escapeInnoString(path.join(payloadRoot, "installers", "youtubedownloader_install_windows_private_runtime.ps1"))}"; DestDir: "{tmp}\\YouTubeDownloaderPayload\\installers"; Flags: ignoreversion`,
-    ...(includeRuntime
-      ? [`Source: "${escapeInnoString(path.join(runtimeRoot, "*"))}"; DestDir: "{tmp}\\YouTubeDownloaderPayload\\runtime"; Flags: recursesubdirs createallsubdirs ignoreversion`]
-      : []),
-    "",
-    "[Run]",
-    ...(includeRuntime
-      ? []
-      : [`Filename: "{tmp}\\${runtimeManifest.assetName}"; Parameters: "/SILENT /SUPPRESSMSGBOXES /NORESTART /CURRENTUSER"; StatusMsg: "Preparing the private YouTube Downloader runtime. Windows security checks can take a moment..."; Flags: waituntilterminated; Check: ShouldInstallRuntime`]),
-    `Filename: "{sys}\\WindowsPowerShell\\v1.0\\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{tmp}\\YouTubeDownloaderPayload\\installers\\youtubedownloader_install_windows_private_runtime.ps1"" -PayloadRoot ""{tmp}\\YouTubeDownloaderPayload""${includeRuntime ? "" : " -SkipRuntimeInstall"} -RuntimeVersion ""${runtimeManifest.version}"""; StatusMsg: "Installing YouTube Downloader..."; Flags: waituntilterminated`,
+    `Source: "${escapeInnoString(path.join(runtimeRoot, "*"))}"; DestDir: "{tmp}\\YouTubeDownloaderPayload\\runtime"; Flags: recursesubdirs createallsubdirs ignoreversion`,
+    `Source: "${escapeInnoString(path.join(payloadRoot, "installers", "youtubedownloader_install_windows_private_runtime.ps1"))}"; DestDir: "{tmp}\\YouTubeDownloaderPayload\\installers"; Flags: ignoreversion; AfterInstall: RunFullInstallation`,
     "",
     "[Code]",
     "var",
-    "  DownloadPage: TDownloadWizardPage;",
     "  ReadyWarningLabel: TNewStaticText;",
-    "  DownloadRuntime: Boolean;",
     "",
-    "function RuntimeIsCurrent: Boolean;",
+    "procedure RunFullInstallation;",
     "var",
-    "  InstalledVersion: AnsiString;",
-    "  RuntimeRoot: String;",
-    "  VersionFile: String;",
+    "  ResultCode: Integer;",
+    "  PowerShellPath: String;",
+    "  Parameters: String;",
     "begin",
-    "  RuntimeRoot := ExpandConstant('{localappdata}\\PremiereYouTubeDownloader\\runtime');",
-    "  VersionFile := RuntimeRoot + '\\.youtubedownloader-runtime-version';",
-    "  if FileExists(VersionFile) then",
-    "  begin",
-    "    Result := LoadStringFromFile(VersionFile, InstalledVersion) and",
-    `      (Trim(String(InstalledVersion)) = '${escapePascalString(runtimeManifest.version)}') and`,
-    "      FileExists(RuntimeRoot + '\\python\\python.exe') and",
-    "      FileExists(RuntimeRoot + '\\python\\Scripts\\yt-dlp.exe') and",
-    "      FileExists(RuntimeRoot + '\\ffmpeg\\bin\\ffmpeg.exe') and",
-    "      FileExists(RuntimeRoot + '\\ffmpeg\\bin\\ffprobe.exe') and",
-    "      FileExists(RuntimeRoot + '\\deno\\bin\\deno.exe');",
-    "  end",
-    "  else",
-    "  begin",
-    "    Result :=",
-    "      FileExists(RuntimeRoot + '\\python\\python.exe') and",
-    "      FileExists(RuntimeRoot + '\\python\\Scripts\\yt-dlp.exe') and",
-    "      FileExists(RuntimeRoot + '\\ffmpeg\\bin\\ffmpeg.exe') and",
-    "      FileExists(RuntimeRoot + '\\ffmpeg\\bin\\ffprobe.exe') and",
-    "      FileExists(RuntimeRoot + '\\deno\\bin\\deno.exe');",
-    "  end;",
-    "end;",
-    "",
-    "function ShouldInstallRuntime: Boolean;",
-    "begin",
-    "  Result := DownloadRuntime;",
+    "  PowerShellPath := ExpandConstant('{sys}\\WindowsPowerShell\\v1.0\\powershell.exe');",
+    `  Parameters := '-NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{tmp}\\YouTubeDownloaderPayload\\installers\\youtubedownloader_install_windows_private_runtime.ps1') + '" -PayloadRoot "' + ExpandConstant('{tmp}\\YouTubeDownloaderPayload') + '" -RuntimeVersion "${escapePascalString(version)}"';`,
+    "  if not Exec(PowerShellPath, Parameters, '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then",
+    "    RaiseException('Unable to start the YouTube Downloader installation script.');",
+    "  if ResultCode <> 0 then",
+    "    RaiseException(Format('YouTube Downloader installation failed with code %d.', [ResultCode]));",
     "end;",
     "",
     "procedure InitializeWizard;",
     "begin",
-    "  DownloadPage := CreateDownloadPage('Downloading YouTube Downloader files',",
-    "    'The first installation can take several minutes. Plugin-only updates stay lightweight.', nil);",
-    "  DownloadPage.ShowBaseNameInsteadOfUrl := True;",
-    "",
     "  WizardForm.ReadyMemo.Visible := False;",
     "  ReadyWarningLabel := TNewStaticText.Create(WizardForm);",
     "  ReadyWarningLabel.Parent := WizardForm.ReadyPage;",
@@ -582,48 +487,6 @@ async function createUserInstaller(compilerPath, version, runtimeManifest, mode)
     "  ReadyWarningLabel.Font.Style := [fsBold];",
     "  ReadyWarningLabel.Caption := 'Important: after you click Install, this window may appear frozen for a few seconds while Windows checks the installation files. This is normal; please wait.';",
     "end;",
-    "",
-    "function NextButtonClick(CurPageID: Integer): Boolean;",
-    "var",
-    "  Error: String;",
-    "begin",
-    "  if CurPageID = wpReady then",
-    "  begin",
-    "    DownloadPage.Clear;",
-    `    DownloadRuntime := ${includeRuntime ? "False" : "not RuntimeIsCurrent"};`,
-    ...(includeRuntime
-      ? []
-      : [
-          "    if DownloadRuntime then",
-          `      DownloadPage.Add('${escapePascalString(runtimeUrl)}', '${runtimeManifest.assetName}', '${runtimeManifest.sha256}');`
-        ]),
-    "    if DownloadRuntime then",
-    "    begin",
-    "      DownloadPage.Show;",
-    "      try",
-    "        try",
-    "          DownloadPage.Download;",
-    "          Result := True;",
-    "        except",
-    "          if DownloadPage.AbortedByUser then",
-    "            Log('Download aborted by user.')",
-    "          else",
-    "          begin",
-    "            Error := Format('%s: %s', [DownloadPage.LastBaseNameOrUrl, GetExceptionMessage]);",
-    "            SuppressibleMsgBox(AddPeriod(Error), mbCriticalError, MB_OK, IDOK);",
-    "          end;",
-    "          Result := False;",
-    "        end;",
-    "      finally",
-    "        DownloadPage.Hide;",
-    "      end;",
-    "    end",
-    "    else",
-    "      Result := True;",
-    "  end",
-    "  else",
-    "    Result := True;",
-    "end;",
     ""
   ].join("\r\n");
 
@@ -632,35 +495,8 @@ async function createUserInstaller(compilerPath, version, runtimeManifest, mode)
   await rm(outputPath, { force: true });
   await writeFile(scriptPath, iss, "utf8");
   await runCommand(compilerPath, ["/Qp", scriptPath]);
-  process.stdout.write(`${includeRuntime ? "Full" : "Light"} Windows installer created at ${outputPath}\n`);
-}
-
-async function readPackageVersion() {
-  // // Use package.json as the single version source for Windows installer artifact names.
-  const raw = await readFile(path.join(projectRoot, "package.json"), "utf8");
-  const parsed = JSON.parse(raw);
-  return String(parsed.version || "").trim();
-}
-
-async function prepareRuntimePayload(runtimeManifest) {
-  // // Build or validate each private dependency before handing the payload to Inno Setup.
-  if (!runtimeManifest.sha256 || rebuildRuntime) {
-    if (reuseStaging && (await pathExists(path.join(runtimeRoot, "python", "python.exe")))) {
-      await validatePythonRuntime();
-    } else {
-      await preparePythonRuntime();
-    }
-    if (reuseStaging && (await pathExists(path.join(runtimeRoot, "ffmpeg", "bin", "ffmpeg.exe")))) {
-      await validateFfmpegRuntime();
-    } else {
-      await prepareFfmpegRuntime();
-    }
-    if (reuseStaging && (await pathExists(path.join(runtimeRoot, "deno", "bin", "deno.exe")))) {
-      await validateDenoRuntime();
-    } else {
-      await prepareDenoRuntime();
-    }
-  }
+  const sha256 = await hashFile(outputPath);
+  process.stdout.write(`Full Windows installer created at ${outputPath}\nSHA-256: ${sha256}\n`);
 }
 
 async function main() {
@@ -670,9 +506,8 @@ async function main() {
   }
 
   const version = await readPackageVersion();
-  const runtimeManifest = await readRuntimeManifest();
-  if (!runtimeManifest.version || !runtimeManifest.releaseTag || !runtimeManifest.assetName) {
-    throw new Error(`Incomplete runtime manifest: ${runtimeManifestPath}`);
+  if (!version) {
+    throw new Error("package.json does not contain a version.");
   }
 
   if (!reuseStaging) {
@@ -684,20 +519,13 @@ async function main() {
 
   await runCommand(npmCommand, ["run", "verify"], { shell: process.platform === "win32" });
   await copyExtensionPayload();
-  await prepareRuntimePayload(runtimeManifest);
+  await prepareRuntimePayload(version);
 
   const compilerPath = await prepareInnoCompiler();
-  const finalizedRuntimeManifest = await createRuntimeInstaller(compilerPath, runtimeManifest);
-  if (!lightOnly && (await pathExists(path.join(runtimeRoot, "python", "python.exe")))) {
-    await createUserInstaller(compilerPath, version, finalizedRuntimeManifest, "full");
-  } else if (!lightOnly) {
-    process.stdout.write("Full Windows installer skipped because the unpacked runtime is not available.\n");
+  if (!(await pathExists(path.join(runtimeRoot, "python", "python.exe")))) {
+    throw new Error("Full Windows installer cannot be built because the private runtime is incomplete.");
   }
-  if (!fullOnly && finalizedRuntimeManifest.sha256) {
-    await createUserInstaller(compilerPath, version, finalizedRuntimeManifest, "light");
-  } else if (!fullOnly) {
-    process.stdout.write("Light Windows installer skipped because runtime metadata has no SHA-256 yet.\n");
-  }
+  await createFullInstaller(compilerPath, version);
 }
 
 main().catch((error) => {

@@ -129,6 +129,12 @@ ytdl_install_runtime() {
     echo "The bundled runtime archive is incomplete." >&2
     exit 1
   fi
+  if ! ytdl_validate_runtime "${new_runtime}"; then
+    # // Keep the previous runtime untouched when a bundled executable cannot start.
+    rm -rf "${temp_root}"
+    echo "The bundled runtime failed validation." >&2
+    exit 1
+  fi
 
   mkdir -p "$(dirname "${runtime_dir}")"
   old_runtime="${runtime_dir}.old.$$"
@@ -187,11 +193,6 @@ if [ "${YTDL_RUNTIME_ARCH}" != "$(uname -m)" ]; then
   exit 1
 fi
 
-ytdl_install_extension
-if [ "${YTDL_SKIP_CEP_DEBUG:-0}" != "1" ]; then
-  ytdl_enable_cep_debug_mode
-fi
-
 if ytdl_runtime_is_current "${YTDL_RUNTIME_DIR}"; then
   echo "Keeping the compatible private runtime already installed."
 else
@@ -201,6 +202,10 @@ fi
 ytdl_validate_runtime "${YTDL_RUNTIME_DIR}"
 printf "%s\n" "${YTDL_RUNTIME_VERSION}" >"${YTDL_RUNTIME_DIR}/.youtubedownloader-runtime-version"
 chown "${YTDL_UID}:${YTDL_GID}" "${YTDL_RUNTIME_DIR}/.youtubedownloader-runtime-version"
+ytdl_install_extension
+if [ "${YTDL_SKIP_CEP_DEBUG:-0}" != "1" ]; then
+  ytdl_enable_cep_debug_mode
+fi
 ytdl_write_extension_config "${YTDL_RUNTIME_DIR}"
 
 echo "Installation complete. Restart Premiere Pro, then open Window > Extensions > YouTube Downloader."

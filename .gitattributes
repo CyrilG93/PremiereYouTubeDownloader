@@ -1,0 +1,5 @@
+# // Keep macOS installers executable after archives are created on Windows.
+*.sh text eol=lf
+
+# // Keep Windows launchers in their native command-shell format.
+*.bat text eol=crlf

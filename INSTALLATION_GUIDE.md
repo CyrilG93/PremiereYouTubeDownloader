@@ -78,9 +78,8 @@ This guide provides detailed step-by-step installation instructions for beginner
 
 ### Recommended: Run the PKG Installer
 
-1. Download the macOS installer for your Mac:
-   - Apple Silicon: `PremiereYouTubeDownloader-vX-macOS-Installer-arm64.pkg`
-   - Intel: `PremiereYouTubeDownloader-vX-macOS-Installer-x86_64.pkg`
+1. On an Apple Silicon Mac, download `PremiereYouTubeDownloader-vX-macOS-Installer-arm64.pkg`.
+   Intel Macs are not supported by the public installer.
 2. Double-click the `.pkg` file and follow the installer.
 3. The installer will:
    - ✅ Install the extension in your Adobe CEP extensions folder
@@ -179,8 +178,8 @@ If you still have issues:
 
 | | Windows | macOS |
 |---|---------|-------|
-| **OS** | Windows 10/11 (64-bit) | macOS 10.14 or later |
-| **Premiere Pro** | 2020 (v14) or later | 2020 (v14) or later |
+| **OS** | Windows 10/11 (64-bit) | macOS 12 or later on Apple Silicon |
+| **Premiere Pro** | 2025 (v25) or later | 2025 (v25) or later |
 | **Disk Space** | ~500 MB | ~500 MB |
 | **Internet** | Required | Required |
 

@@ -12,12 +12,14 @@ const projectRoot = path.resolve(__dirname, "..");
 const stagingRoot = path.join(projectRoot, ".youtubedownloader-macos-staging");
 const downloadsDir = path.join(stagingRoot, "downloads");
 const runtimeRoot = path.join(stagingRoot, "runtime");
+const runtimeArchivesDir = path.join(stagingRoot, "runtime-archives");
 const packagesDir = path.join(stagingRoot, "packages");
 const coreScriptsDir = path.join(stagingRoot, "core-scripts");
 const releasesDir = path.join(projectRoot, "Releases");
 const pythonVersion = process.env.YTDL_PRIVATE_PYTHON_VERSION || "3.11.9";
 const requestedArch = process.env.YTDL_MAC_ARCH || process.arch;
-const macArch = requestedArch === "x64" ? "x86_64" : requestedArch;
+const macArch = requestedArch;
+const macosDeploymentTarget = "12.0";
 const rebuildRuntime = process.env.YTDL_REBUILD_RUNTIME === "1";
 const reuseStaging = process.env.YTDL_REUSE_STAGING === "1";
 const denoVersion = process.env.YTDL_DENO_VERSION || "latest";
@@ -235,14 +237,12 @@ async function preparePrivateFfmpeg() {
     "--disable-gpl",
     "--disable-nonfree"
   ];
-  if (macArch === "x86_64") {
-    // // Keep Intel builds independent from an additional NASM installation.
-    configureArgs.push("--disable-x86asm");
-  }
-
-  await runCommand(path.join(sourceDir, "configure"), configureArgs, { cwd: sourceDir });
-  await runCommand("make", [`-j${cpuCount}`], { cwd: sourceDir });
-  await runCommand("make", ["install"], { cwd: sourceDir });
+  const buildEnv = {
+    MACOSX_DEPLOYMENT_TARGET: macosDeploymentTarget
+  };
+  await runCommand(path.join(sourceDir, "configure"), configureArgs, { cwd: sourceDir, env: buildEnv });
+  await runCommand("make", [`-j${cpuCount}`], { cwd: sourceDir, env: buildEnv });
+  await runCommand("make", ["install"], { cwd: sourceDir, env: buildEnv });
 
   const licenseFiles = ["COPYING.LGPLv2.1", "COPYING.LGPLv3", "LICENSE.md"];
   for (const fileName of licenseFiles) {
@@ -259,9 +259,31 @@ async function preparePrivateFfmpeg() {
   await runCommand(path.join(installDir, "bin", "ffprobe"), ["-version"]);
 }
 
+async function validateMacBinary(binaryPath) {
+  // // Reject Intel binaries and deployment targets newer than the supported macOS baseline.
+  const validationScript = [
+    `binary=${shellQuote(binaryPath)}`,
+    `maximum=${shellQuote(macosDeploymentTarget)}`,
+    'architectures="$(lipo -archs "$binary")"',
+    'if [ "$architectures" != "arm64" ]; then echo "Unexpected architectures $architectures in $binary; expected arm64 only." >&2; exit 1; fi',
+    'minimum="$(otool -l "$binary" | awk \'/cmd LC_BUILD_VERSION/{found=1; next} found && $1=="minos"{print $2; exit}\')"',
+    'if [ -z "$minimum" ]; then echo "Missing macOS deployment target: $binary" >&2; exit 1; fi',
+    'minimum_major="${minimum%%.*}"',
+    'minimum_rest="${minimum#*.}"',
+    'minimum_minor="${minimum_rest%%.*}"',
+    'maximum_major="${maximum%%.*}"',
+    'maximum_minor="${maximum#*.}"',
+    'if [ "$minimum_major" -gt "$maximum_major" ] || { [ "$minimum_major" -eq "$maximum_major" ] && [ "$minimum_minor" -gt "$maximum_minor" ]; }; then',
+    '  echo "Unsupported macOS deployment target $minimum in $binary; maximum is $maximum." >&2',
+    '  exit 1',
+    'fi'
+  ].join("\n");
+  await runCommand("/bin/bash", ["-c", validationScript]);
+}
+
 async function preparePrivateDeno() {
   // // Download the official Deno binary matching the target macOS architecture.
-  const denoArch = macArch === "arm64" ? "aarch64-apple-darwin" : "x86_64-apple-darwin";
+  const denoArch = "aarch64-apple-darwin";
   const denoUrl =
     process.env.YTDL_DENO_DOWNLOAD_URL ||
     (denoVersion === "latest"
@@ -279,6 +301,11 @@ async function preparePrivateDeno() {
   await mkdir(targetDir, { recursive: true });
   await cp(path.join(extractDir, "deno"), path.join(targetDir, "deno"));
   await runCommand("chmod", ["755", path.join(targetDir, "deno")]);
+  // // Ship Deno's MIT notice with every redistributed runtime.
+  await cp(
+    path.join(projectRoot, "installers", "licenses", "DENO_LICENSE.md"),
+    path.join(runtimeRoot, "deno", "LICENSE.md")
+  );
   await runCommand(path.join(targetDir, "deno"), ["--version"]);
 }
 
@@ -319,30 +346,55 @@ async function prepareRuntimePayload(runtimeVersion) {
     await preparePrivateDeno();
   }
 
+  // // Repair reused staging folders that predate the bundled Deno notice.
+  await cp(
+    path.join(projectRoot, "installers", "licenses", "DENO_LICENSE.md"),
+    path.join(runtimeRoot, "deno", "LICENSE.md")
+  );
+  for (const binaryPath of [
+    pythonPath,
+    ffmpegPath,
+    ffprobePath,
+    denoPath
+  ]) {
+    await validateMacBinary(binaryPath);
+  }
   await writeFile(path.join(runtimeRoot, ".youtubedownloader-runtime-version"), `${runtimeVersion}\n`, "ascii");
 }
 
 async function createRuntimeArchive(version) {
   // // Build or reuse a private runtime archive for the target architecture and return its immutable metadata.
   const assetName = `PremiereYouTubeDownloader-v${version}-macOS-Runtime-${macArch}.tar.gz`;
-  const outputPath = path.join(releasesDir, assetName);
+  const outputPath = path.join(runtimeArchivesDir, assetName);
 
   if (!rebuildRuntime && (await pathExists(outputPath))) {
     const sha256 = await hashFile(outputPath);
-    return { assetName, sha256 };
+    return { assetName, outputPath, sha256 };
   }
 
-  if (macArch !== process.arch && !(macArch === "x86_64" && process.arch === "x64")) {
-    throw new Error(`Build the ${macArch} runtime on a matching Mac architecture.`);
+  if (process.arch !== "arm64") {
+    throw new Error("The macOS runtime must be built on Apple Silicon.");
   }
 
   await prepareRuntimePayload(version);
-  await mkdir(releasesDir, { recursive: true });
+  await mkdir(runtimeArchivesDir, { recursive: true });
   await rm(outputPath, { force: true });
-  await runCommand("tar", ["-czf", outputPath, "runtime"], { cwd: stagingRoot });
+  // // Strip Finder metadata and disable AppleDouble generation inside the public runtime archive.
+  await prunePackagingMetadata(runtimeRoot);
+  await runCommand("xattr", ["-cr", runtimeRoot]);
+  await runCommand("tar", ["-czf", outputPath, "runtime"], {
+    cwd: stagingRoot,
+    env: {
+      COPYFILE_DISABLE: "1"
+    }
+  });
+  await runCommand("/bin/bash", [
+    "-c",
+    `if tar -tzf ${shellQuote(outputPath)} | grep -E '(^|/)\\._' >/dev/null; then echo 'AppleDouble metadata found in runtime archive.' >&2; exit 1; fi`
+  ]);
   const sha256 = await hashFile(outputPath);
-  process.stdout.write(`macOS runtime asset created at ${outputPath}\n`);
-  return { assetName, sha256 };
+  process.stdout.write(`macOS private runtime archive created at ${outputPath}\n`);
+  return { assetName, outputPath, sha256 };
 }
 
 function shellQuote(value) {
@@ -391,7 +443,7 @@ async function copyCorePayload(runtimeAsset, version) {
 
   const bundledRuntimeDir = path.join(coreScriptsDir, "runtime");
   await mkdir(bundledRuntimeDir, { recursive: true });
-  await cp(path.join(releasesDir, runtimeAsset.assetName), path.join(bundledRuntimeDir, runtimeAsset.assetName));
+  await cp(runtimeAsset.outputPath, path.join(bundledRuntimeDir, runtimeAsset.assetName));
 
   const runtimeEnv = [
     "# // Generated by youtubedownloader-package-macos-pkg.mjs.",
@@ -435,6 +487,9 @@ async function createDistribution(version) {
 <installer-gui-script minSpecVersion="2">
   <title>YouTube Downloader</title>
   <organization>com.youtubedownloader.premiere</organization>
+  <allowed-os-versions>
+    <os-version min="${xmlEscape(macosDeploymentTarget)}"/>
+  </allowed-os-versions>
   <domains enable_localSystem="true"/>
   <options customize="never" require-scripts="false" hostArchitectures="${xmlEscape(macArch)}"/>
   <choices-outline>
@@ -492,12 +547,16 @@ async function createInstallerPackage(version, runtimeAsset) {
 
   if (signingIdentity) {
     await runCommand("pkgutil", ["--check-signature", outputPath]);
-  } else {
-    const validationDir = path.join(stagingRoot, "package-validation");
-    await rm(validationDir, { recursive: true, force: true });
-    await runCommand("pkgutil", ["--expand", outputPath, validationDir]);
-    await rm(validationDir, { recursive: true, force: true });
   }
+  // // Expand every package layer and reject metadata files before publication.
+  const validationDir = path.join(stagingRoot, "package-validation");
+  await rm(validationDir, { recursive: true, force: true });
+  await runCommand("pkgutil", ["--expand-full", outputPath, validationDir]);
+  await runCommand("/bin/bash", [
+    "-c",
+    `if find ${shellQuote(validationDir)} -name '._*' -print -quit | grep -q .; then echo 'AppleDouble metadata found in PKG.' >&2; exit 1; fi`
+  ]);
+  await rm(validationDir, { recursive: true, force: true });
   process.stdout.write(`macOS installer created at ${outputPath}\n`);
 }
 
@@ -506,8 +565,11 @@ async function main() {
   if (process.platform !== "darwin") {
     throw new Error("macOS PKG packaging must run on macOS.");
   }
-  if (!["arm64", "x86_64"].includes(macArch)) {
-    throw new Error(`Unsupported macOS architecture: ${macArch}`);
+  if (macArch !== "arm64") {
+    throw new Error("Only the macOS ARM64 package is supported for public releases.");
+  }
+  if (process.arch !== "arm64") {
+    throw new Error("macOS packaging must run on an Apple Silicon Mac.");
   }
 
   const version = await readPackageVersion();

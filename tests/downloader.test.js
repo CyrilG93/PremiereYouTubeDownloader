@@ -194,4 +194,29 @@ if (os.platform() === 'darwin') {
     assert.deepStrictEqual(ytDlpCommand.baseArgs, ['-m', 'yt_dlp']);
 }
 
+// // Keep release tooling aligned with the supported Full Windows and ARM64 macOS scope.
+const projectRoot = path.resolve(__dirname, '..');
+const packageMetadata = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8'));
+const windowsPackaging = fs.readFileSync(
+    path.join(projectRoot, 'scripts', 'youtubedownloader-package-windows-exe.mjs'),
+    'utf8'
+);
+const macPackaging = fs.readFileSync(
+    path.join(projectRoot, 'scripts', 'youtubedownloader-package-macos-pkg.mjs'),
+    'utf8'
+);
+const manifest = fs.readFileSync(path.join(projectRoot, 'CSXS', 'manifest.xml'), 'utf8');
+assert.strictEqual(windowsPackaging.includes('Windows-Light-Installer'), false);
+assert.strictEqual(windowsPackaging.includes('YTDL_WINDOWS_LIGHT_ONLY'), false);
+assert.strictEqual(windowsPackaging.includes('windows-runtime.json'), false);
+assert.strictEqual(windowsPackaging.includes('AfterInstall: RunFullInstallation'), true);
+assert.strictEqual(windowsPackaging.includes('RaiseException'), true);
+assert.strictEqual(macPackaging.includes('macArch !== "arm64"'), true);
+assert.strictEqual(macPackaging.includes('COPYFILE_DISABLE: "1"'), true);
+assert.strictEqual(macPackaging.includes('MACOSX_DEPLOYMENT_TARGET: macosDeploymentTarget'), true);
+assert.strictEqual(macPackaging.includes('path.join(runtimeArchivesDir, assetName)'), true);
+assert.strictEqual(manifest.includes(`ExtensionBundleVersion="${packageMetadata.version}"`), true);
+assert.strictEqual(manifest.includes('example.com'), false);
+assert.strictEqual(fs.existsSync(path.join(projectRoot, 'installers', 'licenses', 'DENO_LICENSE.md')), true);
+
 console.log('downloader format selector tests passed');
