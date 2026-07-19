@@ -39,6 +39,7 @@ Releases/*-macOS-Installer-*.pkg
 Releases/*-macOS-Runtime-*.tar.gz
 Releases/*-Windows-*-Installer.exe
 Releases/*-Windows-Runtime-*.exe
+Releases/*.zip
 
 # IDE
 .vscode/
