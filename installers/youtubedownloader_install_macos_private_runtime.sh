@@ -54,8 +54,10 @@ ytdl_json_escape() {
 
 ytdl_install_extension() {
   # // Replace the user-level CEP extension with the payload shipped in the installer.
-  source_dir="${YTDL_PAYLOAD_ROOT}/dist/PremiereYouTubeDownloader"
-  dest_dir="${YTDL_HOME}/Library/Application Support/Adobe/CEP/extensions/PremiereYouTubeDownloader"
+  local source_dir="${YTDL_PAYLOAD_ROOT}/dist/PremiereYouTubeDownloader"
+  local dest_dir="${YTDL_HOME}/Library/Application Support/Adobe/CEP/extensions/PremiereYouTubeDownloader"
+  local replacement_dir
+  local old_dir
   if [ ! -d "${source_dir}" ]; then
     echo "Extension payload is missing: ${source_dir}" >&2
     exit 1
@@ -76,7 +78,7 @@ ytdl_install_extension() {
 
 ytdl_enable_cep_debug_mode() {
   # // Enable unsigned CEP extensions for recent Adobe hosts in the active user's preferences.
-  csxs_version=7
+  local csxs_version=7
   while [ "${csxs_version}" -le 20 ]; do
     ytdl_run_as_user defaults write "com.adobe.CSXS.${csxs_version}" PlayerDebugMode -string "1" >/dev/null 2>&1 || true
     csxs_version=$((csxs_version + 1))
@@ -86,8 +88,8 @@ ytdl_enable_cep_debug_mode() {
 
 ytdl_runtime_is_current() {
   # // Reuse an installed runtime only when version and all expected tools validate.
-  runtime_dir="$1"
-  version_file="${runtime_dir}/.youtubedownloader-runtime-version"
+  local runtime_dir="$1"
+  local version_file="${runtime_dir}/.youtubedownloader-runtime-version"
   [ -f "${version_file}" ] || return 1
   [ "$(tr -d '\r\n' <"${version_file}")" = "${YTDL_RUNTIME_VERSION}" ] || return 1
   [ -x "${runtime_dir}/python/bin/python3" ] || return 1
@@ -103,11 +105,18 @@ ytdl_runtime_is_current() {
 
 ytdl_install_runtime() {
   # // Extract the bundled private runtime after verifying its immutable SHA-256.
-  runtime_dir="$1"
+  local runtime_dir="$1"
+  local temp_root
+  local archive_path="${YTDL_SCRIPT_DIR}/runtime/${YTDL_RUNTIME_ASSET_NAME}"
+  local extracted_root
+  local actual_hash
+  local new_runtime
+  local old_runtime
   temp_root="$(mktemp -d "${TMPDIR:-/tmp}/youtubedownloader-runtime.XXXXXX")"
-  archive_path="${YTDL_SCRIPT_DIR}/runtime/${YTDL_RUNTIME_ASSET_NAME}"
   extracted_root="${temp_root}/extracted"
   mkdir -p "${extracted_root}"
+  # // Let the graphical user traverse root-owned staging while the bundled tools are validated as that user.
+  chmod 755 "${temp_root}" "${extracted_root}"
 
   if [ ! -f "${archive_path}" ]; then
     rm -rf "${temp_root}"
@@ -150,7 +159,7 @@ ytdl_install_runtime() {
 
 ytdl_validate_runtime() {
   # // Validate the runtime tools before exposing their paths to the extension.
-  runtime_dir="$1"
+  local runtime_dir="$1"
   ytdl_run_as_user "${runtime_dir}/python/bin/python3" -m yt_dlp --version >/dev/null
   ytdl_run_as_user "${runtime_dir}/ffmpeg/bin/ffmpeg" -version >/dev/null
   ytdl_run_as_user "${runtime_dir}/ffmpeg/bin/ffprobe" -version >/dev/null
@@ -159,12 +168,13 @@ ytdl_validate_runtime() {
 
 ytdl_write_extension_config() {
   # // Persist exact private-runtime paths in the config file already read by client/js/downloader.js.
-  runtime_dir="$1"
-  extension_dir="${YTDL_HOME}/Library/Application Support/Adobe/CEP/extensions/PremiereYouTubeDownloader"
-  config_file="${extension_dir}/client/js/config.json"
-  python_path="${runtime_dir}/python/bin/python3"
-  ffmpeg_path="${runtime_dir}/ffmpeg/bin/ffmpeg"
-  deno_path="${runtime_dir}/deno/bin/deno"
+  local runtime_dir="$1"
+  local extension_dir="${YTDL_HOME}/Library/Application Support/Adobe/CEP/extensions/PremiereYouTubeDownloader"
+  local config_file="${extension_dir}/client/js/config.json"
+  local python_path="${runtime_dir}/python/bin/python3"
+  local ffmpeg_path="${runtime_dir}/ffmpeg/bin/ffmpeg"
+  local deno_path="${runtime_dir}/deno/bin/deno"
+  local generated_at
   generated_at="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
   mkdir -p "$(dirname "${config_file}")"

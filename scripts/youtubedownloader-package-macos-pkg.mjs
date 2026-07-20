@@ -1,6 +1,6 @@
 // // Build a macOS Installer package that embeds the CEP extension and a private Python/yt-dlp/FFmpeg/Deno runtime.
 import { createReadStream } from "node:fs";
-import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
+import { chmod, cp, mkdir, open, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -225,6 +225,7 @@ async function preparePrivateFfmpeg() {
   const cpuCount = Math.max(1, Number.parseInt(process.env.YTDL_BUILD_JOBS || "", 10) || 4);
   const configureArgs = [
     `--prefix=${installDir}`,
+    "--disable-autodetect",
     "--disable-debug",
     "--disable-doc",
     "--disable-ffplay",
@@ -232,6 +233,7 @@ async function preparePrivateFfmpeg() {
     "--enable-static",
     "--enable-ffmpeg",
     "--enable-ffprobe",
+    "--enable-securetransport",
     "--enable-videotoolbox",
     "--enable-audiotoolbox",
     "--disable-gpl",
@@ -260,7 +262,7 @@ async function preparePrivateFfmpeg() {
 }
 
 async function validateMacBinary(binaryPath) {
-  // // Reject Intel binaries and deployment targets newer than the supported macOS baseline.
+  // // Reject Intel binaries, unsupported deployment targets, and build-machine-only dynamic libraries.
   const validationScript = [
     `binary=${shellQuote(binaryPath)}`,
     `maximum=${shellQuote(macosDeploymentTarget)}`,
@@ -276,9 +278,105 @@ async function validateMacBinary(binaryPath) {
     'if [ "$minimum_major" -gt "$maximum_major" ] || { [ "$minimum_major" -eq "$maximum_major" ] && [ "$minimum_minor" -gt "$maximum_minor" ]; }; then',
     '  echo "Unsupported macOS deployment target $minimum in $binary; maximum is $maximum." >&2',
     '  exit 1',
-    'fi'
+    'fi',
+    'while IFS= read -r dependency; do',
+    '  case "$dependency" in',
+    '    /System/Library/*|/usr/lib/*|@executable_path/*|@loader_path/*|@rpath/*) ;;',
+    '    *) echo "Unsupported external dependency $dependency in $binary." >&2; exit 1 ;;',
+    '  esac',
+    "done < <(otool -l \"$binary\" | awk '$1 == \"cmd\" && $2 ~ /^LC_(LOAD_DYLIB|LOAD_WEAK_DYLIB|REEXPORT_DYLIB|LOAD_UPWARD_DYLIB|LAZY_LOAD_DYLIB)$/ { wanted=1; next } wanted && $1 == \"name\" { print $2; wanted=0 }')"
   ].join("\n");
   await runCommand("/bin/bash", ["-c", validationScript]);
+}
+
+async function listRuntimeFiles(targetDir) {
+  // // Enumerate every regular runtime file so native Python modules receive the same checks as top-level tools.
+  const files = [];
+  const entries = await readdir(targetDir, { withFileTypes: true });
+  for (const entry of entries) {
+    const entryPath = path.join(targetDir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...(await listRuntimeFiles(entryPath)));
+    } else if (entry.isFile()) {
+      files.push(entryPath);
+    }
+  }
+  return files;
+}
+
+async function isMachOBinary(targetPath) {
+  // // Detect thin and universal Mach-O files from their magic bytes without launching every runtime file.
+  const machOMagic = new Set([
+    "cefaedfe",
+    "feedface",
+    "cffaedfe",
+    "feedfacf",
+    "cafebabe",
+    "bebafeca",
+    "cafebabf",
+    "bfbafeca"
+  ]);
+  const fileHandle = await open(targetPath, "r");
+  try {
+    const magic = Buffer.alloc(4);
+    const { bytesRead } = await fileHandle.read(magic, 0, magic.length, 0);
+    return bytesRead === magic.length && machOMagic.has(magic.toString("hex"));
+  } finally {
+    await fileHandle.close();
+  }
+}
+
+async function readMacBinaryArchitectures(binaryPath) {
+  // // Read lipo output so universal Python wheels can be normalized to the package's ARM64-only contract.
+  return new Promise((resolve, reject) => {
+    const child = spawn("lipo", ["-archs", binaryPath], { stdio: ["ignore", "pipe", "pipe"] });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk.toString();
+    });
+    child.on("error", reject);
+    child.on("exit", (code) => {
+      if (code === 0) {
+        resolve(stdout.trim().split(/\s+/).filter(Boolean));
+        return;
+      }
+      reject(new Error(`lipo could not inspect ${binaryPath}: ${stderr.trim()}`));
+    });
+  });
+}
+
+async function normalizeRuntimeMacBinaries() {
+  // // Thin universal native modules to ARM64 while preserving their original executable permissions.
+  const runtimeFiles = await listRuntimeFiles(runtimeRoot);
+  for (const binaryPath of runtimeFiles) {
+    if (!(await isMachOBinary(binaryPath))) {
+      continue;
+    }
+    const architectures = await readMacBinaryArchitectures(binaryPath);
+    if (!architectures.includes("arm64") || architectures.length === 1) {
+      continue;
+    }
+    const thinPath = `${binaryPath}.arm64`;
+    const binaryStat = await stat(binaryPath);
+    await rm(thinPath, { force: true });
+    await runCommand("lipo", [binaryPath, "-thin", "arm64", "-output", thinPath]);
+    await chmod(thinPath, binaryStat.mode & 0o777);
+    await rename(thinPath, binaryPath);
+  }
+}
+
+async function validateRuntimeMacBinaries() {
+  // // Validate all native files, including Python extension modules bundled by yt-dlp dependencies.
+  const runtimeFiles = await listRuntimeFiles(runtimeRoot);
+  for (const binaryPath of runtimeFiles) {
+    if (await isMachOBinary(binaryPath)) {
+      await validateMacBinary(binaryPath);
+    }
+  }
 }
 
 async function preparePrivateDeno() {
@@ -351,14 +449,8 @@ async function prepareRuntimePayload(runtimeVersion) {
     path.join(projectRoot, "installers", "licenses", "DENO_LICENSE.md"),
     path.join(runtimeRoot, "deno", "LICENSE.md")
   );
-  for (const binaryPath of [
-    pythonPath,
-    ffmpegPath,
-    ffprobePath,
-    denoPath
-  ]) {
-    await validateMacBinary(binaryPath);
-  }
+  await normalizeRuntimeMacBinaries();
+  await validateRuntimeMacBinaries();
   await writeFile(path.join(runtimeRoot, ".youtubedownloader-runtime-version"), `${runtimeVersion}\n`, "ascii");
 }
 

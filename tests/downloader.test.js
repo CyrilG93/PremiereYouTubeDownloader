@@ -205,6 +205,10 @@ const macPackaging = fs.readFileSync(
     path.join(projectRoot, 'scripts', 'youtubedownloader-package-macos-pkg.mjs'),
     'utf8'
 );
+const macInstaller = fs.readFileSync(
+    path.join(projectRoot, 'installers', 'youtubedownloader_install_macos_private_runtime.sh'),
+    'utf8'
+);
 const manifest = fs.readFileSync(path.join(projectRoot, 'CSXS', 'manifest.xml'), 'utf8');
 assert.strictEqual(windowsPackaging.includes('Windows-Light-Installer'), false);
 assert.strictEqual(windowsPackaging.includes('YTDL_WINDOWS_LIGHT_ONLY'), false);
@@ -215,6 +219,14 @@ assert.strictEqual(macPackaging.includes('macArch !== "arm64"'), true);
 assert.strictEqual(macPackaging.includes('COPYFILE_DISABLE: "1"'), true);
 assert.strictEqual(macPackaging.includes('MACOSX_DEPLOYMENT_TARGET: macosDeploymentTarget'), true);
 assert.strictEqual(macPackaging.includes('path.join(runtimeArchivesDir, assetName)'), true);
+assert.strictEqual(macPackaging.includes('"--disable-autodetect"'), true);
+assert.strictEqual(macPackaging.includes('"--enable-securetransport"'), true);
+assert.strictEqual(macPackaging.includes('LC_(LOAD_DYLIB'), true);
+assert.strictEqual(macPackaging.includes('Unsupported external dependency'), true);
+assert.strictEqual(macPackaging.includes('"-thin", "arm64"'), true);
+assert.strictEqual(macPackaging.includes('validateRuntimeMacBinaries'), true);
+assert.strictEqual(macInstaller.includes('chmod 755 "${temp_root}" "${extracted_root}"'), true);
+assert.strictEqual(macInstaller.includes('local runtime_dir="$1"'), true);
 assert.strictEqual(manifest.includes(`ExtensionBundleVersion="${packageMetadata.version}"`), true);
 assert.strictEqual(manifest.includes('example.com'), false);
 assert.strictEqual(fs.existsSync(path.join(projectRoot, 'installers', 'licenses', 'DENO_LICENSE.md')), true);
