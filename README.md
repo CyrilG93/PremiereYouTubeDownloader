@@ -56,11 +56,7 @@ This extension needs the following tools installed on your computer (everything 
    - No system Python, ffmpeg, or PATH setup is required for the recommended EXE installer.
    - During installation, keep any Command Prompt or PowerShell windows open until Setup finishes.
 
-**2. Legacy BAT installer (advanced)**:
-   - Use `INSTALL_WINDOWS.bat` only if you prefer installing dependencies yourself.
-   - The legacy BAT can require administrator rights and system PATH configuration.
-
-**3. Start Premiere Pro**
+**2. Start Premiere Pro**
    - Go to **Window** > **Extensions** > **YouTube Downloader**
 
 ---
@@ -73,12 +69,7 @@ This extension needs the following tools installed on your computer (everything 
    - The installer adds the Premiere extension and a private runtime with Python, yt-dlp, Deno, FFmpeg and FFprobe.
    - No Homebrew setup is required for the recommended PKG installer.
 
-**2. Legacy shell installer (advanced)**:
-   - Use `INSTALL_MACOS.sh` only if you prefer installing dependencies yourself with Homebrew.
-   - The shell installer installs the extension for your macOS account and does not request an administrator password.
-   - If an older system-wide copy already exists, it is left untouched; CEP uses the newer per-user version.
-
-**3. Start Premiere Pro**
+**2. Start Premiere Pro**
    - Go to **Window** > **Extensions** > **YouTube Downloader**
 
 ---
@@ -101,45 +92,6 @@ The folder contains several tools to help you if something goes wrong.
 ### Option 2: Manual Installation
 
 See [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md) for detailed step-by-step instructions.
-
----
-
-## ✅ How to update Dependencies
-
-### Windows
-If you installed with the recommended EXE, install a newer EXE to update the private runtime and extension. If you used the legacy BAT installer, run `UPDATE_DEPENDENCIES.bat` to force-update system dependencies.
-
-### macOS
-If you installed with the recommended PKG, run in Terminal:
-```bash
-./UPDATE_DEPENDENCIES.sh
-```
-
-This checks the private runtime installed by the PKG, updates yt-dlp and Deno when possible, verifies FFmpeg/FFprobe, and refreshes the extension config. If Deno cannot check online updates because of a network certificate, the script keeps the installed Deno as long as it still works. If the private FFmpeg runtime is missing or broken, install the latest PKG again.
-
----
-
-## ⚡ Quick Local macOS Update
-
-To test panel changes without rebuilding the `.pkg`, run:
-
-```bash
-npm run update:local:macos
-```
-
-You can also run `UPDATE_LOCAL_MACOS.sh` from Terminal. Restart Premiere Pro after the copy.
-
----
-
-## ⚡ Quick Local Windows Update
-
-To test panel changes without rebuilding the `.exe`, run:
-
-```powershell
-npm.cmd run update:local:windows
-```
-
-You can also double-click `UPDATE_LOCAL_WINDOWS.bat`. Restart Premiere Pro after the copy.
 
 ---
 
@@ -189,31 +141,12 @@ Customize where your videos land relative to your Premiere Pro project.
 
 ---
 
-## 🔧 Installing ffmpeg on Windows
-
-Manual ffmpeg installation is only needed for the legacy BAT installer. The recommended Windows EXE includes a private FFmpeg runtime.
-
-1. Download from: https://www.gyan.dev/ffmpeg/builds/ (choose "ffmpeg-release-essentials.zip")
-2. Extract the ZIP file
-3. Copy the `bin` folder contents to `C:\ffmpeg\bin\`
-4. Add to system PATH:
-   - Press `Win + X` → System → Advanced system settings
-   - Click "Environment Variables"
-   - Under "System variables", find and select "Path", click "Edit"
-   - Click "New" and add: `C:\ffmpeg\bin`
-   - Click OK on all windows
-5. Restart your terminal/command prompt
-6. Verify: `ffmpeg -version`
-
----
-
 ## 🐛 Troubleshooting
 
 ### Extension doesn't appear in Premiere Pro
 
 **Windows:**
 - Recommended EXE location: `%APPDATA%\Adobe\CEP\extensions\PremiereYouTubeDownloader`
-- Legacy BAT location: `C:\Program Files\Common Files\Adobe\CEP\extensions\PremiereYouTubeDownloader`
 - Check Registry: `HKEY_CURRENT_USER\Software\Adobe\CSXS.11` should have `PlayerDebugMode` = `1`
 
 **macOS:**
@@ -239,19 +172,11 @@ pip3 install --upgrade yt-dlp
 brew install ffmpeg
 ```
 
-### Download fails with "n challenge solving failed"
-
-This error means yt-dlp can't solve YouTube's JavaScript challenges. Fix:
-
-1. Install Deno: Run the installer again, or manually install from https://deno.land/
-2. Run the dependency updater included with the extension: `UPDATE_DEPENDENCIES.bat` on Windows or `UPDATE_DEPENDENCIES.sh` on macOS.
-3. If auto-detection fails, configure custom paths in **Settings → Advanced Tools**
-
 ### Download fails or no audio
 
 - Verify ffmpeg is installed: `ffmpeg -version`
-- Run the dependency updater included with the extension, or reinstall the latest Full installer to repair the private runtime.
-- Check the logs in the extension (click "Logs" button)
+- Reinstall the latest Full installer to repair the private runtime.
+- Check the logs in the extension (click "Logs" button).
 
 ### Tools not found (custom paths)
 
