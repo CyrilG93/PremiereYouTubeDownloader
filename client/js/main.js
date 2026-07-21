@@ -69,7 +69,7 @@ console.error = function (...args) {
     addLog(args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' '), 'error');
 };
 
-console.log("YouTube Downloader v2.7.25 - Serverless Mode Initialized");
+console.log("YouTube Downloader v2.8.0 - Serverless Mode Initialized");
 
 if (toggleLogsBtn) {
     toggleLogsBtn.addEventListener('click', () => {
@@ -1081,7 +1081,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 const GITHUB_REPO = 'CyrilG93/PremiereYouTubeDownloader';
 const PRODUCT_PAGE_URL = 'https://www.cyrilplugin.com/youtube-downloader';
-let CURRENT_VERSION = '2.7.25';
+let CURRENT_VERSION = '2.8.0';
 
 function openExternalUrl(url) {
     // Open external product and update URLs through CEP when the panel runs inside Premiere.
