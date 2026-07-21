@@ -266,54 +266,12 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Changelog
 
-### Version 2.7.22 - 2026-07-15
-- **YouTube reliability**: The bundled Deno runtime is now passed directly to yt-dlp, improving JavaScript challenge solving and available-format detection on clean installations.
-- **Download reliability**: Progress and final filenames now use structured yt-dlp output, and failed downloads can no longer be mistaken for successful ones.
-- **Windows maintenance**: The dependency updater now updates the private yt-dlp runtime actually used by the Full installer.
-
-### Version 2.7.17 - 2026-07-02
-- **UX**: Time range downloads now show a clearer preparation message while YouTube/FFmpeg is getting the selected section ready.
-
-### Version 2.7.16 - 2026-07-02
-- **Fix**: Time range downloads now stop before downloading when the selected range is outside the source video duration.
-
-### Version 2.7.15 - 2026-07-02
-- **Fix**: Time range downloads now detect stalls and retry with a local trim fallback instead of staying stuck without progress.
-
-### Version 2.7.14 - 2026-06-25
-- **Fix**: The macOS PKG runtime now launches yt-dlp through its bundled Python, preventing installation failures caused by a non-portable yt-dlp launcher.
-
-### Version 2.7.13 - 2026-06-19
-- **Fix**: Standard HD downloads now prefer native MP4/H.264 + M4A when available, avoiding unnecessary FFmpeg conversion. Higher-than-1080p sources still use the conversion path when needed.
-
-### Version 2.7.12 - 2026-06-19
-- **Fix**: Windows downloads now merge VP9/Opus sources into a safe intermediate file before converting to Premiere-friendly H.264, preventing failures at the final merge step.
-- **Fix**: Windows installer validation no longer reports a false FFprobe failure after FFprobe prints its version.
-
-### Version 2.7.11 - 2026-06-19
-- **Fix**: Windows private runtime now launches yt-dlp through its bundled Python, preventing installer and download failures caused by a broken `yt-dlp.exe` launcher.
-
-### Version 2.7.10 - 2026-06-19
-- **Fix**: Windows downloads now retry automatically without browser cookies when cookie extraction fails immediately, avoiding silent `yt-dlp` code 1 errors on clean machines.
-
-### Version 2.7.9 - 2026-06-18
-- **Fix**: Windows EXE installs now detect the private runtime automatically when `config.json` is missing, preventing `spawn yt-dlp ENOENT` on clean machines.
-
-### Version 2.7.8 - 2026-06-18
-- **Windows installer**: Added the base for an Inno Setup `.exe` installer with a private Python, yt-dlp, Deno, FFmpeg and FFprobe runtime.
-
-### Version 2.7.7 - 2026-06-18
-- **macOS maintenance**: Deno update failures caused by network certificates are now reported as warnings when the installed Deno runtime is still usable.
-
-### Version 2.7.6 - 2026-06-18
-- **macOS maintenance**: `UPDATE_DEPENDENCIES.sh` now checks the private PKG runtime, updates yt-dlp and Deno, verifies FFmpeg/FFprobe, and refreshes the extension tool paths.
-
-### Version 2.7.5 - 2026-06-18
-- **macOS installer**: Added a one-step PKG installer with a private Python, yt-dlp, Deno, FFmpeg and FFprobe runtime.
-- **Premiere compatibility**: The H.264 conversion can now fall back to the macOS video encoder when the bundled FFmpeg does not include `libx264`.
-- **Fix**: The installed panel now displays the correct app version.
-- **Fix**: H.264 and ProRes downloads now avoid AV1 sources when using the private macOS runtime, preventing conversion failures on Macs without AV1 hardware decoding.
-- **Fix**: Temporary `[H264].converting.mp4` files are ignored when the extension searches for the completed download.
+### Version 2.8.0 - 2026-07-21
+- **One-step installation**: New complete installers for Windows and Apple Silicon Macs include the extension plus a private Python, yt-dlp, Deno, FFmpeg and FFprobe runtime—no separate setup required.
+- **More reliable downloads**: The bundled Deno runtime is used directly by yt-dlp; failed cookie extraction retries automatically, and downloads now use reliable progress and completed-file detection.
+- **Better quality and compatibility**: Standard HD downloads prefer native MP4/H.264 when available. Higher resolutions use the best source available and convert safely to Premiere-friendly H.264 when needed.
+- **More robust time ranges**: Invalid ranges are blocked before downloading, while stalled section downloads automatically fall back to a local trim.
+- **Polished Premiere experience**: The panel follows Premiere's appearance, the version badge opens the product page, and installers better communicate their progress.
 
 ### Version 2.7.3 - 2026-06-09
 - **4K downloads**: Maximum quality now retrieves the best available YouTube source, including 1440p and 4K.
