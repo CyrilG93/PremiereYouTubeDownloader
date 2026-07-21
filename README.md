@@ -82,16 +82,6 @@ The folder contains several tools to help you if something goes wrong.
 |------|--------------|-----------------|
 | `PremiereYouTubeDownloader-vX-Windows-Full-Installer.exe` | Installs the Windows extension and private runtime in one step. | Recommended Windows installer. |
 | `PremiereYouTubeDownloader-vX-macOS-Installer-arm64.pkg` | Installs the macOS extension and private runtime on Apple Silicon. | Recommended macOS installer. |
-| `INSTALL_WINDOWS.bat` | Legacy Windows installer using system dependencies. | Advanced/manual installs only. |
-| `UPDATE_DEPENDENCIES.bat` | Forces update of all dependencies (yt-dlp, Deno, etc.) to latest versions. | Run regularly to stay up to date. |
-| `UPDATE_DEPENDENCIES.sh` | Checks the macOS PKG private runtime, updates yt-dlp/Deno, and refreshes tool paths. | Use if YouTube downloads start failing after installation. |
-
-
----
-
-### Option 2: Manual Installation
-
-See [INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md) for detailed step-by-step instructions.
 
 ---
 
