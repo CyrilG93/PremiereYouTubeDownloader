@@ -303,21 +303,6 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ---
 
-## 📄 Files
-
-| File | Description |
-|------|-------------|
-| `INSTALL_WINDOWS.bat` | Automated installer for Windows (run as admin) |
-| `INSTALL_MACOS.sh` | Automated per-user installer for macOS (no sudo required) |
-| `UPDATE_DEPENDENCIES.bat` | Force-update all dependencies (Windows) |
-| `UPDATE_DEPENDENCIES.sh` | Force-update all dependencies (macOS) |
-| `INSTALLATION_GUIDE.md` | Detailed manual installation instructions |
-| `client/` | Extension UI and logic |
-| `host/` | Premiere Pro integration (ExtendScript) |
-| `CSXS/` | Extension manifest |
-
----
-
 ## 🙏 Credits
 
 - Built for Adobe Premiere Pro CEP
