@@ -54,6 +54,7 @@ This extension needs the following tools installed on your computer:
    - Open `PremiereYouTubeDownloader-vX-Windows-Full-Installer.exe`.
    - The installer adds the Premiere extension and a private runtime with Python, yt-dlp, Deno, FFmpeg and FFprobe.
    - No system Python, ffmpeg, or PATH setup is required for the recommended EXE installer.
+   - During installation, keep any Command Prompt or PowerShell windows open until Setup finishes.
 
 **2. Legacy BAT installer (advanced)**:
    - Use `INSTALL_WINDOWS.bat` only if you prefer installing dependencies yourself.

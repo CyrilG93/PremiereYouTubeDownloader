@@ -1,11 +1,11 @@
 #!/bin/bash
 # YouTube Downloader for Premiere Pro - macOS Installer
-# Version 2.7.24
+# Version 2.7.25
 
 echo ""
 echo "========================================"
 echo "YouTube Downloader for Premiere Pro"
-echo "Installation Package v2.7.24 - macOS"
+echo "Installation Package v2.7.25 - macOS"
 echo "========================================"
 echo ""
 
