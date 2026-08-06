@@ -26,6 +26,9 @@ const denoVersion = process.env.YTDL_DENO_VERSION || "latest";
 const ffmpegVersion = process.env.YTDL_FFMPEG_VERSION || "8.0.2";
 const ffmpegSourceUrl =
   process.env.YTDL_FFMPEG_SOURCE_URL || `https://ffmpeg.org/releases/ffmpeg-${ffmpegVersion}.tar.xz`;
+const lameVersion = process.env.YTDL_LAME_VERSION || "3.100";
+const lameSourceUrl =
+  process.env.YTDL_LAME_SOURCE_URL || `https://downloads.sourceforge.net/project/lame/lame/${lameVersion}/lame-${lameVersion}.tar.gz`;
 
 function runCommand(command, args, options = {}) {
   // // Execute build and packaging commands with visible progress and strict exit handling.
@@ -211,6 +214,32 @@ async function prunePrivatePython(pythonDir) {
 }
 
 async function preparePrivateFfmpeg() {
+  // // Compile a static LGPL LAME library so the private FFmpeg runtime can create MP3 files.
+  const lameArchive = path.join(downloadsDir, `lame-${lameVersion}.tar.gz`);
+  const lameSourceParent = path.join(stagingRoot, "lame-source");
+  const lameSourceDir = path.join(lameSourceParent, `lame-${lameVersion}`);
+  const lameInstallDir = path.join(stagingRoot, "lame-install");
+  await downloadFile(lameSourceUrl, lameArchive);
+  await rm(lameSourceParent, { recursive: true, force: true });
+  await rm(lameInstallDir, { recursive: true, force: true });
+  await mkdir(lameSourceParent, { recursive: true });
+  await runCommand("tar", ["-xzf", lameArchive, "-C", lameSourceParent]);
+  await runCommand(
+    path.join(lameSourceDir, "configure"),
+    [`--prefix=${lameInstallDir}`, "--disable-shared", "--enable-static", "--disable-frontend"],
+    { cwd: lameSourceDir, env: { MACOSX_DEPLOYMENT_TARGET: macosDeploymentTarget } }
+  );
+
+  const cpuCount = Math.max(1, Number.parseInt(process.env.YTDL_BUILD_JOBS || "", 10) || 4);
+  await runCommand("make", [`-j${cpuCount}`], {
+    cwd: lameSourceDir,
+    env: { MACOSX_DEPLOYMENT_TARGET: macosDeploymentTarget }
+  });
+  await runCommand("make", ["install"], {
+    cwd: lameSourceDir,
+    env: { MACOSX_DEPLOYMENT_TARGET: macosDeploymentTarget }
+  });
+
   // // Compile FFmpeg from official source with GPL/nonfree disabled for a redistributable private runtime.
   const sourceArchive = path.join(downloadsDir, `ffmpeg-${ffmpegVersion}.tar.xz`);
   const sourceParent = path.join(stagingRoot, "ffmpeg-source");
@@ -222,7 +251,6 @@ async function preparePrivateFfmpeg() {
   await runCommand("tar", ["-xJf", sourceArchive, "-C", sourceParent]);
   await rm(installDir, { recursive: true, force: true });
 
-  const cpuCount = Math.max(1, Number.parseInt(process.env.YTDL_BUILD_JOBS || "", 10) || 4);
   const configureArgs = [
     `--prefix=${installDir}`,
     "--disable-autodetect",
@@ -236,6 +264,9 @@ async function preparePrivateFfmpeg() {
     "--enable-securetransport",
     "--enable-videotoolbox",
     "--enable-audiotoolbox",
+    "--enable-libmp3lame",
+    `--extra-cflags=-I${path.join(lameInstallDir, "include")}`,
+    `--extra-ldflags=-L${path.join(lameInstallDir, "lib")}`,
     "--disable-gpl",
     "--disable-nonfree"
   ];
@@ -253,12 +284,34 @@ async function preparePrivateFfmpeg() {
       await cp(sourcePath, path.join(installDir, fileName));
     }
   }
+  // // Include the static LAME library's LGPL notice with the redistributed FFmpeg runtime.
+  const lameLicensePath = path.join(lameSourceDir, "COPYING");
+  if (await pathExists(lameLicensePath)) {
+    await cp(lameLicensePath, path.join(installDir, "LAME_LICENSE.txt"));
+  }
 
   await rm(path.join(installDir, "include"), { recursive: true, force: true });
   await rm(path.join(installDir, "lib"), { recursive: true, force: true });
   await rm(path.join(installDir, "share"), { recursive: true, force: true });
   await runCommand(path.join(installDir, "bin", "ffmpeg"), ["-version"]);
   await runCommand(path.join(installDir, "bin", "ffprobe"), ["-version"]);
+}
+
+async function hasPrivateMp3Encoder(ffmpegPath) {
+  // // Inspect the encoder list instead of trusting a successful FFmpeg launch from an older staging runtime.
+  return new Promise((resolve, reject) => {
+    const child = spawn(ffmpegPath, ["-hide_banner", "-encoders"], {
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+    let stdout = "";
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk.toString();
+    });
+    child.on("error", reject);
+    child.on("exit", (code) => {
+      resolve(code === 0 && /^\s*[A-Z.]+\s+libmp3lame\s/m.test(stdout));
+    });
+  });
 }
 
 async function validateMacBinary(binaryPath) {
@@ -430,11 +483,19 @@ async function prepareRuntimePayload(runtimeVersion) {
 
   const ffmpegPath = path.join(runtimeRoot, "ffmpeg", "bin", "ffmpeg");
   const ffprobePath = path.join(runtimeRoot, "ffmpeg", "bin", "ffprobe");
-  if (reuseStaging && (await pathExists(ffmpegPath)) && (await pathExists(ffprobePath))) {
+  if (
+    reuseStaging &&
+    (await pathExists(ffmpegPath)) &&
+    (await pathExists(ffprobePath)) &&
+    (await hasPrivateMp3Encoder(ffmpegPath))
+  ) {
     await runCommand(ffmpegPath, ["-version"]);
     await runCommand(ffprobePath, ["-version"]);
   } else {
     await preparePrivateFfmpeg();
+  }
+  if (!(await hasPrivateMp3Encoder(ffmpegPath))) {
+    throw new Error("Private FFmpeg was built without libmp3lame; MP3 downloads would fail.");
   }
 
   const denoPath = path.join(runtimeRoot, "deno", "bin", "deno");

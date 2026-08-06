@@ -221,6 +221,8 @@ assert.strictEqual(macPackaging.includes('MACOSX_DEPLOYMENT_TARGET: macosDeploym
 assert.strictEqual(macPackaging.includes('path.join(runtimeArchivesDir, assetName)'), true);
 assert.strictEqual(macPackaging.includes('"--disable-autodetect"'), true);
 assert.strictEqual(macPackaging.includes('"--enable-securetransport"'), true);
+assert.strictEqual(macPackaging.includes('"--enable-libmp3lame"'), true);
+assert.strictEqual(macPackaging.includes('hasPrivateMp3Encoder'), true);
 assert.strictEqual(macPackaging.includes('LC_(LOAD_DYLIB'), true);
 assert.strictEqual(macPackaging.includes('Unsupported external dependency'), true);
 assert.strictEqual(macPackaging.includes('"-thin", "arm64"'), true);
