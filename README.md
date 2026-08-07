@@ -181,6 +181,10 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 
 ## 📝 Changelog
 
+### Version 2.8.1 - 2026-08-07
+- **MP3 downloads on macOS**: Fixed the bundled runtime so Audio Only downloads can reliably create MP3 files.
+- **Reliable installation**: The macOS installer now includes the audio encoder required for MP3, while the Windows Full installer remains available for Windows users.
+
 ### Version 2.8.0 - 2026-07-21
 - **One-step installation**: New complete installers for Windows and Apple Silicon Macs include the extension plus a private Python, yt-dlp, Deno, FFmpeg and FFprobe runtime—no separate setup required.
 - **More reliable downloads**: The bundled Deno runtime is used directly by yt-dlp; failed cookie extraction retries automatically, and downloads now use reliable progress and completed-file detection.
