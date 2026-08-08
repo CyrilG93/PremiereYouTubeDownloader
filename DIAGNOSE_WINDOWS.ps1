@@ -49,8 +49,13 @@ Add-YtdlReportLine ""
 Add-YtdlReportLine "=== Windows profile ==="
 $profileLeaf = Split-Path -Leaf $env:USERPROFILE
 $isAsciiProfile = $profileLeaf -cmatch '^[\x20-\x7E]+$'
+$isCepSafeProfile = $profileLeaf -cmatch '^[A-Za-z0-9._-]+$'
 Add-YtdlReportLine "User profile: $env:USERPROFILE"
 Add-YtdlReportLine "Profile leaf is ASCII only: $isAsciiProfile"
+Add-YtdlReportLine "Profile leaf uses CEP-safe characters only: $isCepSafeProfile"
+if (-not $isCepSafeProfile) {
+  Add-YtdlReportLine "[WARN] The Windows profile contains characters such as spaces, quotes, or non-Latin text that can affect legacy CEP path loading."
+}
 Add-YtdlReportLine "AppData: $env:APPDATA"
 Add-YtdlReportLine "LocalAppData: $env:LOCALAPPDATA"
 Invoke-YtdlProbe "Read Windows version" {
@@ -229,7 +234,12 @@ JSON.stringify((function () {
       Add-YtdlReportLine "[FAIL] Page evaluation exception: $($probeResult.result.exceptionDetails.text)"
     } else {
       $value = $probeResult.result.result.value
-      Add-YtdlReportLine "CEF target evaluation: $value"
+      if ([string]::IsNullOrWhiteSpace([string]$value)) {
+        $rawProbe = $probeResult | ConvertTo-Json -Depth 10 -Compress
+        Add-YtdlReportLine "[WARN] CEF returned no JavaScript evaluation value: $rawProbe"
+      } else {
+        Add-YtdlReportLine "CEF target evaluation: $value"
+      }
     }
   }
 } elseif ($targets) {
