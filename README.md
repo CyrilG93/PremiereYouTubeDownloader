@@ -54,7 +54,7 @@ This extension needs the following tools installed on your computer (everything 
    - Open `PremiereYouTubeDownloader-vX-Windows-Full-Installer.exe`.
    - The installer adds the Premiere extension and a private runtime with Python, yt-dlp, Deno, FFmpeg and FFprobe.
    - No system Python, ffmpeg, or PATH setup is required for the recommended EXE installer.
-   - During installation, keep any Command Prompt or PowerShell windows open until Setup finishes.
+   - Keep Setup open until it finishes. Windows security checks can make the bundled FFprobe validation take a few minutes.
 
 **2. Start Premiere Pro**
    - Go to **Window** > **Extensions** > **YouTube Downloader**
@@ -138,6 +138,7 @@ Customize where your videos land relative to your Premiere Pro project.
 **Windows:**
 - Recommended EXE location: `%APPDATA%\Adobe\CEP\extensions\PremiereYouTubeDownloader`
 - Check Registry: `HKEY_CURRENT_USER\Software\Adobe\CSXS.11` should have `PlayerDebugMode` = `1`
+- If the EXE reports an installation error or appears to pause during FFprobe validation, send the log at `%LOCALAPPDATA%\PremiereYouTubeDownloader\installer.log`. Do not install Python, Deno, yt-dlp, or FFmpeg separately when using the Full Installer.
 
 **macOS:**
 - Verify installation location: `~/Library/Application Support/Adobe/CEP/extensions/PremiereYouTubeDownloader`

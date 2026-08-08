@@ -18,11 +18,19 @@ $runtimeDir = Join-Path $env:LOCALAPPDATA "PremiereYouTubeDownloader\runtime"
 $payloadRuntimeDir = Join-Path $PayloadRoot "runtime"
 $runtimeVersionFile = Join-Path $runtimeDir ".youtubedownloader-runtime-version"
 $configFile = Join-Path $destDir "client\js\config.json"
+$installLogPath = Join-Path $env:LOCALAPPDATA "PremiereYouTubeDownloader\installer.log"
 
 function Write-YtdlInfo {
   param([string]$Message)
-  # // Keep install logs readable when launched from either PowerShell or the Inno Setup window.
-  Write-Host $Message
+  # // Save progress in addition to the hidden Inno Setup PowerShell output so users can diagnose slow runtime checks.
+  $line = "[{0:yyyy-MM-dd HH:mm:ss}] {1}" -f (Get-Date), $Message
+  Write-Host $line
+  try {
+    New-Item -ItemType Directory -Path (Split-Path -Parent $installLogPath) -Force | Out-Null
+    Add-Content -LiteralPath $installLogPath -Value $line -Encoding UTF8
+  } catch {
+    # // Logging must not prevent the extension from being installed on a profile with restricted LocalAppData access.
+  }
 }
 
 function Copy-YtdlDirectoryFresh {
@@ -109,24 +117,28 @@ function Test-YtdlPrivateRuntime {
   }
 
   # // Capture native tool output before printing so PowerShell pipelines do not disturb process exit codes.
+  Write-YtdlInfo "Checking bundled Python and yt-dlp..."
   $ytDlpVersion = & $pythonPath -m yt_dlp --version 2>&1
   if ($LASTEXITCODE -ne 0) {
     throw "Private Python could not run yt-dlp."
   }
   $ytDlpVersion | Select-Object -First 1 | Write-Host
 
+  Write-YtdlInfo "Checking bundled FFmpeg..."
   $ffmpegVersion = & $ffmpegPath -version 2>&1
   if ($LASTEXITCODE -ne 0) {
     throw "Private FFmpeg failed."
   }
   $ffmpegVersion | Select-Object -First 1 | Write-Host
 
+  Write-YtdlInfo "Checking bundled FFprobe. Windows security scans can make this step take a few minutes."
   $ffprobeVersion = & $ffprobePath -version 2>&1
   if ($LASTEXITCODE -ne 0) {
     throw "Private FFprobe failed."
   }
   $ffprobeVersion | Select-Object -First 1 | Write-Host
 
+  Write-YtdlInfo "Checking bundled Deno..."
   $denoVersion = & $denoPath --version 2>&1
   if ($LASTEXITCODE -ne 0) {
     throw "Private Deno failed."
@@ -169,6 +181,7 @@ if (-not (Test-Path -LiteralPath $sourceDir)) {
 }
 
 Write-YtdlInfo "Installing YouTube Downloader from $PayloadRoot"
+Write-YtdlInfo "Installation progress is also saved to $installLogPath"
 Install-YtdlPrivateRuntime
 Test-YtdlPrivateRuntime
 Copy-YtdlDirectoryFresh -Source $sourceDir -Destination $destDir

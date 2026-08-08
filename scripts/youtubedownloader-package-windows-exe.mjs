@@ -471,7 +471,7 @@ async function createFullInstaller(compilerPath, version) {
     "  if not Exec(PowerShellPath, Parameters, '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then",
     "    RaiseException('Unable to start the YouTube Downloader installation script.');",
     "  if ResultCode <> 0 then",
-    "    RaiseException(Format('YouTube Downloader installation failed with code %d.', [ResultCode]));",
+    "    RaiseException(Format('YouTube Downloader installation failed with code %d. See ' + ExpandConstant('{localappdata}\\PremiereYouTubeDownloader\\installer.log') + ' for details.', [ResultCode]));",
     "end;",
     "",
     "procedure InitializeWizard;",
@@ -488,7 +488,7 @@ async function createFullInstaller(compilerPath, version) {
     "  ReadyWarningLabel.Font.Style := [fsBold];",
     "  ReadyWarningLabel.Caption := 'Important: after you click Install, this window may appear frozen for a few seconds while Windows checks the installation files. This is normal; please wait.';",
     "",
-    "  { // Explain that any helper command windows must stay open while Setup completes. }",
+    "  { // Explain that bundled runtime validation can take longer than the regular file-copy phase. }",
     "  InstallWarningLabel := TNewStaticText.Create(WizardForm);",
     "  InstallWarningLabel.Parent := WizardForm.InstallingPage;",
     "  InstallWarningLabel.Left := WizardForm.ProgressGauge.Left;",
@@ -498,7 +498,7 @@ async function createFullInstaller(compilerPath, version) {
     "  InstallWarningLabel.WordWrap := True;",
     "  InstallWarningLabel.Height := ScaleY(42);",
     "  InstallWarningLabel.Font.Style := [fsBold];",
-    "  InstallWarningLabel.Caption := 'Important: do not close any Command Prompt or PowerShell windows that open. They are required to complete the installation.';",
+    "  InstallWarningLabel.Caption := 'Important: keep Setup open while it validates its bundled FFmpeg and FFprobe files. Windows security checks can make this step take a few minutes.';",
     "end;",
     ""
   ].join("\r\n");

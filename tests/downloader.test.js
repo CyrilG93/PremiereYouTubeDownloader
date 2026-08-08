@@ -209,7 +209,13 @@ const macInstaller = fs.readFileSync(
     path.join(projectRoot, 'installers', 'youtubedownloader_install_macos_private_runtime.sh'),
     'utf8'
 );
+const windowsInstaller = fs.readFileSync(
+    path.join(projectRoot, 'installers', 'youtubedownloader_install_windows_private_runtime.ps1'),
+    'utf8'
+);
 const manifest = fs.readFileSync(path.join(projectRoot, 'CSXS', 'manifest.xml'), 'utf8');
+const panelHtml = fs.readFileSync(path.join(projectRoot, 'client', 'index.html'), 'utf8');
+const panelStyles = fs.readFileSync(path.join(projectRoot, 'client', 'css', 'style.css'), 'utf8');
 assert.strictEqual(windowsPackaging.includes('Windows-Light-Installer'), false);
 assert.strictEqual(windowsPackaging.includes('YTDL_WINDOWS_LIGHT_ONLY'), false);
 assert.strictEqual(windowsPackaging.includes('windows-runtime.json'), false);
@@ -229,6 +235,12 @@ assert.strictEqual(macPackaging.includes('"-thin", "arm64"'), true);
 assert.strictEqual(macPackaging.includes('validateRuntimeMacBinaries'), true);
 assert.strictEqual(macInstaller.includes('chmod 755 "${temp_root}" "${extracted_root}"'), true);
 assert.strictEqual(macInstaller.includes('local runtime_dir="$1"'), true);
+assert.strictEqual(panelHtml.includes('fonts.googleapis.com'), false);
+assert.strictEqual(panelHtml.includes('fonts.gstatic.com'), false);
+assert.strictEqual(panelStyles.includes('height: 100vh'), false);
+assert.strictEqual(panelStyles.includes('html,\nbody'), true);
+assert.strictEqual(windowsInstaller.includes('Checking bundled FFprobe'), true);
+assert.strictEqual(windowsInstaller.includes('installer.log'), true);
 assert.strictEqual(manifest.includes(`ExtensionBundleVersion="${packageMetadata.version}"`), true);
 assert.strictEqual(manifest.includes('example.com'), false);
 assert.strictEqual(fs.existsSync(path.join(projectRoot, 'installers', 'licenses', 'DENO_LICENSE.md')), true);
