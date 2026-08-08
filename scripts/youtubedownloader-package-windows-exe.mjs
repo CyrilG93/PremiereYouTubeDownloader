@@ -310,6 +310,7 @@ async function copyExtensionPayload() {
   }
   for (const fileName of [
     ".debug",
+    "DIAGNOSE_WINDOWS.ps1",
     "README.md",
     "INSTALLATION_GUIDE.md",
     "UPDATE_DEPENDENCIES.bat",

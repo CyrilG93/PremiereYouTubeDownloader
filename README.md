@@ -140,6 +140,10 @@ Customize where your videos land relative to your Premiere Pro project.
 - Check Registry: `HKEY_CURRENT_USER\Software\Adobe\CSXS.11` should have `PlayerDebugMode` = `1`
 - If the EXE reports an installation error or appears to pause during FFprobe validation, send the log at `%LOCALAPPDATA%\PremiereYouTubeDownloader\installer.log`. Do not install Python, Deno, yt-dlp, or FFmpeg separately when using the Full Installer.
 
+### Blank or loading panel on Windows
+
+With Premiere Pro open and the YouTube Downloader panel visible, run [`DIAGNOSE_WINDOWS.ps1`](DIAGNOSE_WINDOWS.ps1) from the extension folder. It checks the CEP installation, debug settings and the live CEP target without relying on browser DevTools. A shareable report is saved to your Desktop. The script does not change your Premiere or Windows configuration.
+
 **macOS:**
 - Verify installation location: `~/Library/Application Support/Adobe/CEP/extensions/PremiereYouTubeDownloader`
 - Run: `defaults read com.adobe.CSXS.11 PlayerDebugMode` (should return `1`)

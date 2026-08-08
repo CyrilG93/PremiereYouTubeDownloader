@@ -213,6 +213,7 @@ const windowsInstaller = fs.readFileSync(
     path.join(projectRoot, 'installers', 'youtubedownloader_install_windows_private_runtime.ps1'),
     'utf8'
 );
+const windowsDiagnostic = fs.readFileSync(path.join(projectRoot, 'DIAGNOSE_WINDOWS.ps1'), 'utf8');
 const manifest = fs.readFileSync(path.join(projectRoot, 'CSXS', 'manifest.xml'), 'utf8');
 const panelHtml = fs.readFileSync(path.join(projectRoot, 'client', 'index.html'), 'utf8');
 const panelStyles = fs.readFileSync(path.join(projectRoot, 'client', 'css', 'style.css'), 'utf8');
@@ -241,6 +242,9 @@ assert.strictEqual(panelStyles.includes('height: 100vh'), false);
 assert.strictEqual(panelStyles.includes('html,\nbody'), true);
 assert.strictEqual(windowsInstaller.includes('Checking bundled FFprobe'), true);
 assert.strictEqual(windowsInstaller.includes('installer.log'), true);
+assert.strictEqual(windowsDiagnostic.includes('Invoke-YtdlCdpEvaluate'), true);
+assert.strictEqual(windowsDiagnostic.includes('webSocketDebuggerUrl'), true);
+assert.strictEqual(windowsPackaging.includes('DIAGNOSE_WINDOWS.ps1'), true);
 assert.strictEqual(manifest.includes(`ExtensionBundleVersion="${packageMetadata.version}"`), true);
 assert.strictEqual(manifest.includes('example.com'), false);
 assert.strictEqual(fs.existsSync(path.join(projectRoot, 'installers', 'licenses', 'DENO_LICENSE.md')), true);
