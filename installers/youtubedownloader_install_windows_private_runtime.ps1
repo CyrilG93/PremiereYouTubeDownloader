@@ -1,6 +1,9 @@
 param(
   [string]$PayloadRoot = "",
-  [string]$RuntimeVersion = "1"
+  [string]$RuntimeVersion = "1",
+  [switch]$UseSystemCepPath,
+  [string]$UserAppData = "",
+  [string]$UserLocalAppData = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -12,13 +15,31 @@ if (-not $PayloadRoot) {
 }
 $PayloadRoot = [System.IO.Path]::GetFullPath($PayloadRoot)
 
+# // Preserve the interactive user's profile paths when Inno Setup elevates this script for a system CEP install.
+if (-not $UserAppData) {
+  $UserAppData = $env:APPDATA
+}
+if (-not $UserLocalAppData) {
+  $UserLocalAppData = $env:LOCALAPPDATA
+}
+
 $sourceDir = Join-Path $PayloadRoot "dist\PremiereYouTubeDownloader"
-$destDir = Join-Path $env:APPDATA "Adobe\CEP\extensions\PremiereYouTubeDownloader"
-$runtimeDir = Join-Path $env:LOCALAPPDATA "PremiereYouTubeDownloader\runtime"
+$userExtensionDir = Join-Path $UserAppData "Adobe\CEP\extensions\PremiereYouTubeDownloader"
+if ($UseSystemCepPath) {
+  # // Keep CEP's renderer away from user-profile characters that are unsafe in legacy file URLs.
+  $commonFilesX86 = [Environment]::GetFolderPath([Environment+SpecialFolder]::CommonProgramFilesX86)
+  if (-not $commonFilesX86) {
+    throw "Windows Common Files (x86) folder could not be resolved for the system CEP installation."
+  }
+  $destDir = Join-Path $commonFilesX86 "Adobe\CEP\extensions\PremiereYouTubeDownloader"
+} else {
+  $destDir = $userExtensionDir
+}
+$runtimeDir = Join-Path $UserLocalAppData "PremiereYouTubeDownloader\runtime"
 $payloadRuntimeDir = Join-Path $PayloadRoot "runtime"
 $runtimeVersionFile = Join-Path $runtimeDir ".youtubedownloader-runtime-version"
 $configFile = Join-Path $destDir "client\js\config.json"
-$installLogPath = Join-Path $env:LOCALAPPDATA "PremiereYouTubeDownloader\installer.log"
+$installLogPath = Join-Path $UserLocalAppData "PremiereYouTubeDownloader\installer.log"
 
 function Write-YtdlInfo {
   param([string]$Message)
@@ -99,6 +120,19 @@ function Install-YtdlPrivateRuntime {
     Test-YtdlPrivateRuntime -TargetRuntimeDir $StagedRuntimeDir
   }
   Write-YtdlInfo "Private runtime installed to $runtimeDir."
+}
+
+function Archive-YtdlUserExtension {
+  # // Remove the unsafe per-user CEP copy only after the system copy has been validated and installed.
+  if (-not $UseSystemCepPath -or -not (Test-Path -LiteralPath $userExtensionDir)) {
+    return
+  }
+
+  $backupRoot = Join-Path $UserLocalAppData "PremiereYouTubeDownloader\cep-user-extension-backups"
+  $backupDir = Join-Path $backupRoot ("PremiereYouTubeDownloader-" + (Get-Date).ToString("yyyyMMdd-HHmmss"))
+  New-Item -ItemType Directory -Path $backupRoot -Force | Out-Null
+  Move-Item -LiteralPath $userExtensionDir -Destination $backupDir
+  Write-YtdlInfo "Previous user CEP extension moved to $backupDir."
 }
 
 function Test-YtdlPrivateRuntime {
@@ -182,10 +216,14 @@ if (-not (Test-Path -LiteralPath $sourceDir)) {
 
 Write-YtdlInfo "Installing YouTube Downloader from $PayloadRoot"
 Write-YtdlInfo "Installation progress is also saved to $installLogPath"
+if ($UseSystemCepPath) {
+  Write-YtdlInfo "Using the system CEP folder to avoid special characters in the Windows user profile path."
+}
 Install-YtdlPrivateRuntime
 Test-YtdlPrivateRuntime
 Copy-YtdlDirectoryFresh -Source $sourceDir -Destination $destDir
 Write-YtdlInfo "YouTube Downloader installed to $destDir."
+Archive-YtdlUserExtension
 if ($env:YTDL_SKIP_CEP_DEBUG -ne "1") {
   # // Allow isolated packaging tests to avoid changing the current user's Adobe registry keys.
   Enable-YtdlCepDebugMode
