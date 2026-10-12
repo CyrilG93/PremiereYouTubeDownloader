@@ -59,6 +59,61 @@ function getPrivateRuntimeConfig() {
     return config;
 }
 
+function runProcess(command, args) {
+    // // Run a private-runtime command and retain its output for a clear panel status message.
+    return new Promise((resolve, reject) => {
+        const child = spawn(command, args, { windowsHide: true });
+        let output = '';
+        let errorOutput = '';
+
+        child.stdout.on('data', data => {
+            output += data.toString();
+        });
+        child.stderr.on('data', data => {
+            errorOutput += data.toString();
+        });
+        child.on('error', reject);
+        child.on('close', code => {
+            if (code === 0) {
+                resolve(output.trim());
+                return;
+            }
+            const details = (errorOutput || output || `Exit code ${code}`).trim();
+            reject(new Error(details));
+        });
+    });
+}
+
+function readPrivateYtDlpVersion(pythonPath) {
+    // // Use the runtime Python module because pip-generated yt-dlp launchers are not portable after installation.
+    return runProcess(pythonPath, ['-m', 'yt_dlp', '--version']);
+}
+
+async function updatePrivateYtDlp() {
+    // // Update only the isolated runtime installed by this plugin, never a user-selected or system-wide yt-dlp.
+    const runtimeConfig = getPrivateRuntimeConfig();
+    const pythonPath = runtimeConfig.pythonPath;
+    if (!pythonPath) {
+        throw new Error('The plugin private runtime was not found. Reinstall the Full installer to repair it.');
+    }
+
+    const previousVersion = await readPrivateYtDlpVersion(pythonPath);
+    const pipArgs = ['-m', 'pip', 'install', '--upgrade', '--disable-pip-version-check', '--no-warn-script-location'];
+    if (os.platform() === 'darwin') {
+        // // The bundled macOS Python follows PEP 668 even though it is isolated inside this plugin runtime.
+        pipArgs.push('--break-system-packages');
+    }
+    pipArgs.push('yt-dlp[default]');
+    await runProcess(pythonPath, pipArgs);
+
+    const currentVersion = await readPrivateYtDlpVersion(pythonPath);
+    return {
+        previousVersion,
+        currentVersion,
+        updated: previousVersion !== currentVersion
+    };
+}
+
 function loadAutoConfig() {
     // // Load installer-written paths, then fill missing values from the private runtime location.
     let autoConfig = {};
@@ -1630,6 +1685,7 @@ module.exports = {
     estimateDownloadSize,
     // Exported for focused regression tests without exposing these helpers in the panel UI.
     getPrivateRuntimeConfig,
+    updatePrivateYtDlp,
     resolveYtDlpCommand,
     resolveDenoPath,
     parseYtDlpProgressPercent,

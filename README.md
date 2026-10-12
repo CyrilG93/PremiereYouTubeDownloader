@@ -129,6 +129,7 @@ Customize where your videos land relative to your Premiere Pro project.
 - **Default Format**: Choose between "Video + Audio", "Video Only" or "Audio Only" as default.
 - **Auto-Import**: Automatically import files into Premiere Pro after download.
 - **Create Project Folder**: Creates a bin inside Premiere Pro with the same name as the download folder.
+- **yt-dlp update**: In **Settings > Advanced Tools**, click **Check and update yt-dlp** to update the private yt-dlp included with the plugin. This does not change any system-wide yt-dlp installation or a custom path you selected.
 
 ---
 

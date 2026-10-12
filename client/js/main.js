@@ -69,7 +69,7 @@ console.error = function (...args) {
     addLog(args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' '), 'error');
 };
 
-console.log("YouTube Downloader v2.8.5 - Serverless Mode Initialized");
+console.log("YouTube Downloader v2.8.6 - Serverless Mode Initialized");
 
 if (toggleLogsBtn) {
     toggleLogsBtn.addEventListener('click', () => {
@@ -109,6 +109,8 @@ const settingsBtn = document.getElementById('settingsBtn');
 const settingsPanel = document.getElementById('settingsPanel');
 const closeSettingsBtn = document.getElementById('closeSettingsBtn');
 const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+const updateYtdlpBtn = document.getElementById('updateYtdlpBtn');
+const ytdlpUpdateStatus = document.getElementById('ytdlpUpdateStatus');
 const folderQuickBtns = document.querySelectorAll('.folder-quick-btn');
 const folderPreset1Input = document.getElementById('folderPreset1');
 const folderPreset2Input = document.getElementById('folderPreset2');
@@ -541,6 +543,41 @@ document.querySelectorAll('.browse-path-btn').forEach(btn => {
 });
 
 saveSettingsBtn.addEventListener('click', saveSettings);
+if (updateYtdlpBtn) {
+    updateYtdlpBtn.addEventListener('click', async () => {
+        // // Keep this action separate from saving settings because it changes only the plugin's private runtime.
+        if (!downloader || typeof downloader.updatePrivateYtDlp !== 'function') {
+            if (ytdlpUpdateStatus) {
+                ytdlpUpdateStatus.textContent = i18n.get('ytdlpUpdateUnavailable');
+                ytdlpUpdateStatus.className = 'ytdlp-update-status error';
+            }
+            return;
+        }
+
+        updateYtdlpBtn.disabled = true;
+        if (ytdlpUpdateStatus) {
+            ytdlpUpdateStatus.textContent = i18n.get('ytdlpUpdateChecking');
+            ytdlpUpdateStatus.className = 'ytdlp-update-status';
+        }
+
+        try {
+            const result = await downloader.updatePrivateYtDlp();
+            if (ytdlpUpdateStatus) {
+                const key = result.updated ? 'ytdlpUpdated' : 'ytdlpAlreadyCurrent';
+                ytdlpUpdateStatus.textContent = `${i18n.get(key)} (${result.currentVersion})`;
+                ytdlpUpdateStatus.className = 'ytdlp-update-status success';
+            }
+        } catch (error) {
+            console.error('yt-dlp update failed:', error);
+            if (ytdlpUpdateStatus) {
+                ytdlpUpdateStatus.textContent = `${i18n.get('ytdlpUpdateFailed')} ${error.message}`;
+                ytdlpUpdateStatus.className = 'ytdlp-update-status error';
+            }
+        } finally {
+            updateYtdlpBtn.disabled = false;
+        }
+    });
+}
 folderPath.addEventListener('change', () => {
     const settings = readSettingsFromFile() || {};
     settings.customFolderPath = folderPath.value.trim();

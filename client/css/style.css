@@ -1221,6 +1221,46 @@ input[type="text"]:not(:placeholder-shown)~.clear-btn {
     border-color: var(--text-tertiary);
 }
 
+.ytdlp-update-section {
+    align-items: flex-start;
+}
+
+.ytdlp-update-btn {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    cursor: pointer;
+    font: inherit;
+    padding: 10px 14px;
+    transition: var(--transition);
+}
+
+.ytdlp-update-btn:hover:not(:disabled) {
+    background: var(--bg-tertiary);
+    border-color: var(--accent-color);
+}
+
+.ytdlp-update-btn:disabled {
+    cursor: wait;
+    opacity: 0.65;
+}
+
+.ytdlp-update-status {
+    color: var(--text-tertiary);
+    font-size: 11px;
+    line-height: 1.4;
+    margin: 8px 0 0;
+}
+
+.ytdlp-update-status.success {
+    color: #56d364;
+}
+
+.ytdlp-update-status.error {
+    color: #ff7b72;
+}
+
 /* Update Banner */
 #updateBanner {
     display: none;
