@@ -29,6 +29,9 @@ const ffmpegSourceUrl =
 const lameVersion = process.env.YTDL_LAME_VERSION || "3.100";
 const lameSourceUrl =
   process.env.YTDL_LAME_SOURCE_URL || `https://downloads.sourceforge.net/project/lame/lame/${lameVersion}/lame-${lameVersion}.tar.gz`;
+const applicationSigningIdentity = process.env.YTDL_MAC_APPLICATION_IDENTITY || "";
+const installerSigningIdentity = process.env.YTDL_MAC_INSTALLER_IDENTITY || "";
+const notaryProfile = process.env.YTDL_NOTARY_PROFILE || "";
 
 function runCommand(command, args, options = {}) {
   // // Execute build and packaging commands with visible progress and strict exit handling.
@@ -512,7 +515,22 @@ async function prepareRuntimePayload(runtimeVersion) {
   );
   await normalizeRuntimeMacBinaries();
   await validateRuntimeMacBinaries();
+  await prunePackagingMetadata(runtimeRoot);
+  await runCommand("xattr", ["-cr", runtimeRoot]);
+  await signRuntimeMacBinaries();
   await writeFile(path.join(runtimeRoot, ".youtubedownloader-runtime-version"), `${runtimeVersion}\n`, "ascii");
+}
+
+async function signRuntimeMacBinaries() {
+  // // Sign every embedded Mach-O before archiving so Apple can validate the private runtime during notarization.
+  if (!applicationSigningIdentity) {
+    return;
+  }
+
+  await runCommand("/bin/bash", [
+    "-c",
+    `while IFS= read -r -d '' binary; do if /usr/bin/file -b "$binary" | /usr/bin/grep -q 'Mach-O'; then /usr/bin/codesign --force --options runtime --timestamp --sign ${shellQuote(applicationSigningIdentity)} "$binary"; /usr/bin/codesign --verify --strict --verbose=2 "$binary"; fi; done < <(/usr/bin/find ${shellQuote(runtimeRoot)} -type f -print0)`
+  ]);
 }
 
 async function createRuntimeArchive(version) {
@@ -616,16 +634,20 @@ async function createComponentPackage(version) {
   // // Build the mandatory script-only core package that performs the per-user installation.
   await rm(packagesDir, { recursive: true, force: true });
   await mkdir(packagesDir, { recursive: true });
-  await runCommand("pkgbuild", [
+  const componentArgs = [
     "--nopayload",
     "--scripts",
     coreScriptsDir,
     "--identifier",
     "com.youtubedownloader.premiere.installer.core",
     "--version",
-    version,
-    path.join(packagesDir, "YouTubeDownloaderCore.pkg")
-  ], {
+    version
+  ];
+  if (installerSigningIdentity) {
+    componentArgs.push("--sign", installerSigningIdentity);
+  }
+  componentArgs.push(path.join(packagesDir, "YouTubeDownloaderCore.pkg"));
+  await runCommand("pkgbuild", componentArgs, {
     env: {
       COPYFILE_DISABLE: "1"
     }
@@ -664,7 +686,6 @@ async function createInstallerPackage(version, runtimeAsset) {
   await createComponentPackage(version);
   const distributionPath = await createDistribution(version);
   const outputPath = path.join(releasesDir, `PremiereYouTubeDownloader-v${version}-macOS-Installer-${macArch}.pkg`);
-  const signingIdentity = process.env.YTDL_MAC_INSTALLER_IDENTITY || "";
   const productArgs = [
     "--distribution",
     distributionPath,
@@ -674,8 +695,8 @@ async function createInstallerPackage(version, runtimeAsset) {
 
   await mkdir(releasesDir, { recursive: true });
   await rm(outputPath, { force: true });
-  if (signingIdentity) {
-    productArgs.push("--sign", signingIdentity, outputPath);
+  if (installerSigningIdentity) {
+    productArgs.push("--sign", installerSigningIdentity, outputPath);
   } else {
     productArgs.push(outputPath);
   }
@@ -685,8 +706,10 @@ async function createInstallerPackage(version, runtimeAsset) {
     }
   });
 
-  const notaryProfile = process.env.YTDL_NOTARY_PROFILE || "";
   if (notaryProfile) {
+    if (!applicationSigningIdentity || !installerSigningIdentity) {
+      throw new Error("Notarization requires YTDL_MAC_APPLICATION_IDENTITY and YTDL_MAC_INSTALLER_IDENTITY.");
+    }
     await runCommand("xcrun", [
       "notarytool",
       "submit",
@@ -698,7 +721,7 @@ async function createInstallerPackage(version, runtimeAsset) {
     await runCommand("xcrun", ["stapler", "staple", outputPath]);
   }
 
-  if (signingIdentity) {
+  if (installerSigningIdentity) {
     await runCommand("pkgutil", ["--check-signature", outputPath]);
   }
   // // Expand every package layer and reject metadata files before publication.

@@ -20,6 +20,7 @@ Download YouTube videos directly into your Adobe Premiere Pro project.
 - ✅ Relative or absolute path support
 - ✅ Multi-language support (English/French)
 - ✅ Panel colors follow the current Premiere Pro appearance
+- ✅ Update the bundled yt-dlp directly from Settings
 
 *> **Note**: Time range downloads and 4K download are slower than full downloads.
 
@@ -188,6 +189,11 @@ If the extension can't find yt-dlp, ffmpeg, or deno:
 ---
 
 ## 📝 Changelog
+
+### Version 2.9.0 - 2026-10-13
+- **Windows accounts with special characters**: The installer now detects Windows profile paths containing spaces, punctuation or non-Latin characters, and safely installs the CEP panel in Adobe's system folder when needed. The private runtime remains in the user account.
+- **yt-dlp update from Settings**: Check and update the yt-dlp bundled with the plugin without reinstalling the extension. Your system installation and custom paths are never changed.
+- **Clear YouTube sign-in help**: When Firefox is selected and YouTube returns a likely authentication 403, the panel now explains that you need to sign in to YouTube in Firefox before trying again.
 
 ### Version 2.8.1 - 2026-08-07
 - **MP3 downloads on macOS**: Fixed the bundled runtime so Audio Only downloads can reliably create MP3 files.
