@@ -276,6 +276,15 @@ function shouldRetryWithoutCookies(errorBuffer, outputBuffer, cookieBrowser) {
     return /cookie|cookies|browser|firefox|chrome|edge|brave|profile|locked/i.test(combinedOutput);
 }
 
+function isLikelyFirefoxCookieAuthenticationError(errorMessage, cookieBrowser) {
+    // // Show Firefox login guidance only for YouTube authentication failures, not unrelated download errors.
+    if (String(cookieBrowser || '').trim().toLowerCase() !== 'firefox') {
+        return false;
+    }
+
+    return /(?:http\s*error\s*403|403\s*forbidden|sign in to confirm|login required|confirm you're not a bot)/i.test(String(errorMessage || ''));
+}
+
 function hasValidTimeRange(startTime, endTime) {
     // // Treat a time range as active only when both bounds are numeric and ordered.
     return Number.isFinite(startTime) && Number.isFinite(endTime) && endTime > startTime;
@@ -1691,6 +1700,7 @@ module.exports = {
     parseYtDlpProgressPercent,
     parseYtDlpFinalPath,
     shouldRetryWithoutCookies,
+    isLikelyFirefoxCookieAuthenticationError,
     hasValidTimeRange,
     validateTimeRangeAgainstDuration,
     buildYtDlpArgs,

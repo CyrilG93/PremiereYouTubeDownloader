@@ -13,6 +13,7 @@ const {
     parseYtDlpProgressPercent,
     parseYtDlpFinalPath,
     shouldRetryWithoutCookies,
+    isLikelyFirefoxCookieAuthenticationError,
     hasValidTimeRange,
     validateTimeRangeAgainstDuration,
     buildYtDlpArgs
@@ -64,6 +65,10 @@ assert.strictEqual(findLatestFile(scanDirectory), realDownload);
 assert.strictEqual(shouldRetryWithoutCookies('', '', 'firefox'), true);
 assert.strictEqual(shouldRetryWithoutCookies('', '', 'none'), false);
 assert.strictEqual(shouldRetryWithoutCookies('ERROR: [WinError 2] The system cannot find the file specified', '', 'firefox'), false);
+assert.strictEqual(isLikelyFirefoxCookieAuthenticationError('ERROR: HTTP Error 403: Forbidden', 'firefox'), true);
+assert.strictEqual(isLikelyFirefoxCookieAuthenticationError('Sign in to confirm you are not a bot', 'firefox'), true);
+assert.strictEqual(isLikelyFirefoxCookieAuthenticationError('ERROR: HTTP Error 403: Forbidden', 'chrome'), false);
+assert.strictEqual(isLikelyFirefoxCookieAuthenticationError('Network timeout', 'firefox'), false);
 assert.strictEqual(hasValidTimeRange(1440, 1510), true);
 assert.strictEqual(hasValidTimeRange(1510, 1440), false);
 assert.strictEqual(hasValidTimeRange(undefined, 1510), false);

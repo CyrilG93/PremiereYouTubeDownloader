@@ -111,6 +111,7 @@ Click the version badge in the header to open the YouTube Downloader product pag
 - Select the browser you use daily (Chrome, Firefox, Safari, etc.).
 - The extension extracts cookies from this browser to authenticate with YouTube.
 - **Why?** Solves "HTTP Error 403" and age-restricted video issues.
+- If the panel asks you to sign in to YouTube in Firefox, open Firefox, log in to YouTube, then retry the download.
 
 ### 📂 Quick Folders & Depth
 Customize where your videos land relative to your Premiere Pro project.

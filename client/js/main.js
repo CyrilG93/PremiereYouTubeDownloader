@@ -69,7 +69,7 @@ console.error = function (...args) {
     addLog(args.map(arg => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' '), 'error');
 };
 
-console.log("YouTube Downloader v2.8.6 - Serverless Mode Initialized");
+console.log("YouTube Downloader v2.8.7 - Serverless Mode Initialized");
 
 if (toggleLogsBtn) {
     toggleLogsBtn.addEventListener('click', () => {
@@ -938,9 +938,11 @@ async function downloadVideo() {
         updateProgress(0, i18n.get('initializing'));
 
         downloadAbortController = new AbortController();
+        let cookieBrowser = 'firefox';
 
         try {
             const settings = readSettingsFromFile() || {};
+            cookieBrowser = settings.cookieBrowser || 'firefox';
             const options = {
                 url: url,
                 format: selectedFormat,
@@ -953,7 +955,7 @@ async function downloadVideo() {
                 customYtdlpPath: settings.customYtdlpPath || null,
                 customFfmpegPath: settings.customFfmpegPath || null,
                 customDenoPath: settings.customDenoPath || null,
-                cookieBrowser: settings.cookieBrowser || 'firefox',
+                cookieBrowser: cookieBrowser,
                 onProgress: (data) => {
                     // Translate status message if it's a key, otherwise show as is
                     const statusText = i18n.get(data.status);
@@ -1001,6 +1003,9 @@ async function downloadVideo() {
         } catch (error) {
             if (error.message === 'Download cancelled' || error.name === 'AbortError') {
                 showStatus(i18n.get('cancelled'), 'warning');
+            } else if (downloader.isLikelyFirefoxCookieAuthenticationError(error.message, cookieBrowser)) {
+                // // Translate the technical YouTube 403 into the one action a Firefox user can take immediately.
+                showStatus(i18n.get('errorFirefoxYouTubeLogin'), 'error');
             } else {
                 showStatus(`Erreur: ${error.message}`, 'error');
             }
