@@ -34,12 +34,8 @@ yarn-error.log*
 logs
 *.log
 
-# Generated installer artifacts
-Releases/*-macOS-Installer-*.pkg
-Releases/*-macOS-Runtime-*.tar.gz
-Releases/*-Windows-*-Installer.exe
-Releases/*-Windows-Runtime-*.exe
-Releases/*.zip
+# Generated release artifacts stay local; published files live in GitHub Releases.
+Releases/
 
 # IDE
 .vscode/
