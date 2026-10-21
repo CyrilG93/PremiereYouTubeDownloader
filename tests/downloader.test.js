@@ -240,6 +240,9 @@ assert.strictEqual(macPackaging.includes('Unsupported external dependency'), tru
 assert.strictEqual(macPackaging.includes('"-thin", "arm64"'), true);
 assert.strictEqual(macPackaging.includes('validateRuntimeMacBinaries'), true);
 assert.strictEqual(macPackaging.includes('signRuntimeMacBinaries'), true);
+assert.strictEqual(macPackaging.includes('installJitlessDenoLauncher'), true);
+assert.strictEqual(macPackaging.includes('deno.real'), true);
+assert.strictEqual(macPackaging.includes('--v8-flags=--jitless'), true);
 assert.strictEqual(macPackaging.includes('YTDL_MAC_APPLICATION_IDENTITY'), true);
 assert.strictEqual(macPackaging.includes('Notarization requires YTDL_MAC_APPLICATION_IDENTITY'), true);
 assert.strictEqual(macInstaller.includes('chmod 755 "${temp_root}" "${extracted_root}"'), true);

@@ -463,6 +463,29 @@ async function preparePrivateDeno() {
   await runCommand(path.join(targetDir, "deno"), ["--version"]);
 }
 
+async function installJitlessDenoLauncher() {
+  // // Run Deno challenge scripts without V8 JIT on macOS versions where CodeRange memory reservation crashes the host.
+  const denoDir = path.join(runtimeRoot, "deno", "bin");
+  const denoPath = path.join(denoDir, "deno");
+  const realDenoPath = path.join(denoDir, "deno.real");
+  const launcher = `#!/bin/bash
+# // Forward regular Deno commands unchanged and disable V8 JIT only for yt-dlp's JavaScript challenge runner.
+REAL="$(dirname "$0")/deno.real"
+if [ "$1" = "run" ]; then
+  shift
+  exec "$REAL" run --v8-flags=--jitless "$@"
+fi
+exec "$REAL" "$@"
+`;
+
+  if (!(await pathExists(realDenoPath))) {
+    await rename(denoPath, realDenoPath);
+  }
+  await writeFile(denoPath, launcher, "utf8");
+  await chmod(denoPath, 0o755);
+  await runCommand(denoPath, ["--version"]);
+}
+
 async function prepareRuntimePayload(runtimeVersion) {
   // // Build and validate the complete private runtime before creating its immutable archive.
   if (!reuseStaging) {
@@ -507,6 +530,7 @@ async function prepareRuntimePayload(runtimeVersion) {
   } else {
     await preparePrivateDeno();
   }
+  await installJitlessDenoLauncher();
 
   // // Repair reused staging folders that predate the bundled Deno notice.
   await cp(
