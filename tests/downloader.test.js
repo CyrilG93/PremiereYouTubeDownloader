@@ -247,6 +247,8 @@ assert.strictEqual(macPackaging.includes('YTDL_MAC_APPLICATION_IDENTITY'), true)
 assert.strictEqual(macPackaging.includes('Notarization requires YTDL_MAC_APPLICATION_IDENTITY'), true);
 assert.strictEqual(macInstaller.includes('chmod 755 "${temp_root}" "${extracted_root}"'), true);
 assert.strictEqual(macInstaller.includes('local runtime_dir="$1"'), true);
+assert.strictEqual(macInstaller.includes('ytdl_prepare_settings_directory'), true);
+assert.strictEqual(macInstaller.includes('chown -R "${YTDL_UID}:${YTDL_GID}" "${settings_dir}"'), true);
 assert.strictEqual(panelHtml.includes('fonts.googleapis.com'), false);
 assert.strictEqual(panelHtml.includes('fonts.gstatic.com'), false);
 assert.strictEqual(panelStyles.includes('height: 100vh'), false);

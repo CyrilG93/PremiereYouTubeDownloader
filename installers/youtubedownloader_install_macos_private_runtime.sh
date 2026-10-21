@@ -166,6 +166,13 @@ ytdl_validate_runtime() {
   ytdl_run_as_user "${runtime_dir}/deno/bin/deno" --version >/dev/null
 }
 
+ytdl_prepare_settings_directory() {
+  # // Restore access to settings left root-owned by older installer versions before CEP writes settings.json.
+  local settings_dir="${YTDL_HOME}/Library/Application Support/PremiereYouTubeDownloader"
+  mkdir -p "${settings_dir}"
+  chown -R "${YTDL_UID}:${YTDL_GID}" "${settings_dir}"
+}
+
 ytdl_write_extension_config() {
   # // Persist exact private-runtime paths in the config file already read by client/js/downloader.js.
   local runtime_dir="$1"
@@ -212,6 +219,7 @@ fi
 ytdl_validate_runtime "${YTDL_RUNTIME_DIR}"
 printf "%s\n" "${YTDL_RUNTIME_VERSION}" >"${YTDL_RUNTIME_DIR}/.youtubedownloader-runtime-version"
 chown "${YTDL_UID}:${YTDL_GID}" "${YTDL_RUNTIME_DIR}/.youtubedownloader-runtime-version"
+ytdl_prepare_settings_directory
 ytdl_install_extension
 if [ "${YTDL_SKIP_CEP_DEBUG:-0}" != "1" ]; then
   ytdl_enable_cep_debug_mode
