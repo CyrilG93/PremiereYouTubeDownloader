@@ -2,7 +2,7 @@
 
 This project builds one Windows Full `.exe` installer with a private runtime:
 
-- Python embeddable
+- Python 3.15.2 embeddable (x64)
 - yt-dlp with EJS support
 - Deno
 - LGPL FFmpeg and FFprobe

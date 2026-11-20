@@ -15,7 +15,8 @@ const payloadRoot = path.join(stagingRoot, "payload");
 const runtimeRoot = path.join(payloadRoot, "runtime");
 const installerRoot = path.join(stagingRoot, "installer");
 const releasesDir = path.join(projectRoot, "Releases");
-const pythonVersion = process.env.YTDL_WINDOWS_PYTHON_VERSION || "3.11.9";
+// // Use the maintained Python runtime with Windows wheels for yt-dlp's dependencies.
+const pythonVersion = process.env.YTDL_WINDOWS_PYTHON_VERSION || "3.15.2";
 const pythonShortVersion = pythonVersion.split(".").slice(0, 2).join("");
 const pythonEmbedUrl =
   process.env.YTDL_WINDOWS_PYTHON_EMBED_URL ||
